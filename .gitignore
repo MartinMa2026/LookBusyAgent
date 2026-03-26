@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# PyInstaller
+*.spec
+dist/
+build/
+
+# 临时文件
+look_busy_temp_*
+*.tmp
+
+# 环境
+.env
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
