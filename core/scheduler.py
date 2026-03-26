@@ -1,6 +1,6 @@
 """
 scheduler.py
-多软件任务调度器：按时间槽轮转执行各软件适配器。
+多软件任务调度器：按权重加权随机选择并执行各软件适配器。
 """
 
 import threading
@@ -13,59 +13,68 @@ from core.llm_generator import LLMGenerator
 
 
 def _load_config():
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'default_tasks.json')
-    config_path = os.path.normpath(config_path)
+    config_path = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), '..', 'config', 'default_tasks.json'))
     with open(config_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
 class Scheduler:
     """
-    调度多个软件适配器，按随机时间槽轮转执行。
+    调度多个软件适配器，按权重随机抽取执行。
 
-    用法：
-        scheduler = Scheduler(
-            selected_apps=["微信", "Chrome"],
-            task_description="做Q1销售报告",
-            stop_event=hotkey_manager.get_stop_event()
-        )
-        scheduler.start()
+    app_weights: {app_name: weight}，weight 为正整数，总和不必为 100。
     """
 
     def __init__(
         self,
-        selected_apps: list[str],
+        app_weights: dict,
         task_description: str = "",
         stop_event: threading.Event = None,
+        identity: str = "",
+        selected_apps: list = None,   # 旧接口兼容
     ):
-        self.selected_apps = selected_apps
+        if selected_apps is not None and not app_weights:
+            app_weights = {app: 1 for app in selected_apps}
+
+        self.app_weights      = {k: v for k, v in app_weights.items() if v > 0}
         self.task_description = task_description
-        self.stop_event = stop_event or threading.Event()
-        self.config = _load_config()
-        self._thread = None
-        self._adapters = {}
-        # 共享 LLM 生成器（异步预热）
-        self._llm = LLMGenerator(task_description=task_description)
+        self.identity         = identity
+        self.stop_event       = stop_event or threading.Event()
+        self.config           = _load_config()
+        self._thread          = None
+        self._adapters        = {}
+        self._llm             = LLMGenerator(task_description=task_description,
+                                             identity=identity)
+
+    # ── 适配器加载 ──────────────────────────────────────────
 
     def _load_adapters(self):
-        """动态加载所需适配器"""
-        from adapters.wechat import WeChatAdapter
+        from adapters.wechat  import WeChatAdapter
         from adapters.browser import BrowserAdapter
-        from adapters.excel import ExcelAdapter
-        from adapters.word import WordAdapter
+        from adapters.excel   import ExcelAdapter
+        from adapters.word    import WordAdapter
+        from adapters.coder   import CoderAdapter
+        from adapters.reader  import ReaderAdapter
 
         adapter_map = {
-            "微信": WeChatAdapter,
+            "微信":   WeChatAdapter,
             "企业微信": WeChatAdapter,
             "Chrome": BrowserAdapter,
-            "Edge": BrowserAdapter,
-            "Excel": ExcelAdapter,
-            "Word": WordAdapter,
-            "WPS": WordAdapter,
+            "Edge":   BrowserAdapter,
+            "Excel":  ExcelAdapter,
+            "Word":   WordAdapter,
+            "WPS":    WordAdapter,
+            "IDE/编辑器": CoderAdapter,
+            "VSCode": CoderAdapter,
+            "代码": CoderAdapter,
+            "阅读器": ReaderAdapter,
+            "PDF": ReaderAdapter,
+            "笔记": ReaderAdapter,
         }
 
         self._adapters = {}
-        for app in self.selected_apps:
+        for app in self.app_weights:
             cls = adapter_map.get(app)
             if cls:
                 self._adapters[app] = cls(
@@ -75,54 +84,61 @@ class Scheduler:
                     llm=self._llm,
                 )
 
+    # ── 加权随机选择 ────────────────────────────────────────
+
+    def _weighted_choice(self) -> str:
+        """按 app_weights 加权随机抽取一个可用 app"""
+        apps = [a for a in self._adapters if a in self.app_weights]
+        if not apps:
+            return ""
+        weights = [self.app_weights[a] for a in apps]
+        return random.choices(apps, weights=weights, k=1)[0]
+
+    # ── 调度循环 ────────────────────────────────────────────
+
     def start(self):
-        """在后台线程中启动调度循环"""
         behavior_engine.set_stop_event(self.stop_event)
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
 
     def stop(self):
-        """停止调度（stop_event 会传递到所有适配器）"""
         self.stop_event.set()
 
     def _run_loop(self):
-        """主调度循环：随机轮转各软件"""
         self._load_adapters()
-
         if not self._adapters:
             return
 
-        app_queue = list(self._adapters.keys())
-        random.shuffle(app_queue)
-        idx = 0
-
-        interval_min, interval_max = self.config.get('switch_interval_minutes', [5, 15])
+        interval_min, interval_max = self.config.get('switch_interval_minutes', [0.5, 2])
 
         while not self.stop_event.is_set():
-            app_name = app_queue[idx % len(app_queue)]
-            adapter = self._adapters[app_name]
-            slot_duration = random.uniform(
-                interval_min * 60,
-                interval_max * 60
-            )
-
+            app_name = self._weighted_choice()
+            if not app_name:
+                time.sleep(1)
+                continue
+            adapter  = self._adapters[app_name]
+            slot_duration = random.uniform(interval_min * 60, interval_max * 60)
             slot_end = time.time() + slot_duration
+
             try:
-                # 用时间槽机制：在 slot_duration 内反复执行该软件的动作
                 while time.time() < slot_end and not self.stop_event.is_set():
                     adapter.run_action()
-                    # 偶发长停顿（模拟被打断）
-                    behavior_engine.maybe_long_pause(probability=0.01)
+                    behavior_engine.maybe_long_pause(probability=0.005)
+                    
+                    # 10% 概率加入一次防休眠微小抖动
+                    if random.random() < 0.1:
+                        behavior_engine.anti_sleep_jitter()
+                    
+                    # 1% 极小概率模拟清理右下角弹窗通知
+                    if random.random() < 0.01:
+                        behavior_engine.dismiss_notification_popup()
             except InterruptedError:
                 break
             except Exception as e:
-                # 单个适配器出错，记录后继续
                 print(f"[Scheduler] {app_name} 适配器异常: {e}")
+                import traceback; traceback.print_exc()
                 time.sleep(2)
 
-            idx += 1
-
     def wait(self):
-        """等待调度线程结束"""
         if self._thread:
             self._thread.join()

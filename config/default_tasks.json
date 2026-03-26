@@ -1,14 +1,28 @@
 {
   "llm": {
-    "api_key": "",
-    "base_url": "https://api.openai.com",
-    "model": "gpt-4o-mini",
+    "api_key": "sk-cp-s4xXxGy0j94FF5wXFzdteKiCvCdCV2btf2oCUdU09a3zT1DupZFHvZE-MH-ZUREJVcLbgIg1vgKzKWtRwfToVk9MsBM_d9kAbNSJLWAkt94L8DC8ICutFRQ",
+    "base_url": "https://api.minimaxi.com/",
+    "model": "MiniMax-M2.5-lightning",
     "_comment": "留空则使用内建模板。Ollama 示例：base_url=http://localhost:11434, model=qwen2.5, api_key=ollama"
   },
   "boss_key": "ctrl+shift+q",
   "session_duration_minutes": 480,
-  "switch_interval_minutes": [5, 15],
-  "work_keywords": ["报告", "分析", "统计", "计划", "预算", "数据", "方案", "总结", "会议", "项目"],
+  "switch_interval_minutes": [
+    0.5,
+    2
+  ],
+  "work_keywords": [
+    "报告",
+    "分析",
+    "统计",
+    "计划",
+    "预算",
+    "数据",
+    "方案",
+    "总结",
+    "会议",
+    "项目"
+  ],
   "browser_urls": [
     "https://www.google.com",
     "https://mail.google.com",
@@ -18,37 +32,53 @@
   ],
   "known_apps": {
     "微信": {
-      "processes": ["WeChat.exe"],
+      "processes": [
+        "WeChat.exe"
+      ],
       "icon": "💬",
       "priority": 0
     },
     "企业微信": {
-      "processes": ["WXWork.exe"],
+      "processes": [
+        "WXWork.exe"
+      ],
       "icon": "💼",
       "priority": 0
     },
     "Chrome": {
-      "processes": ["chrome.exe"],
+      "processes": [
+        "chrome.exe"
+      ],
       "icon": "🌐",
       "priority": 0
     },
     "Edge": {
-      "processes": ["msedge.exe"],
+      "processes": [
+        "msedge.exe"
+      ],
       "icon": "🌐",
       "priority": 0
     },
     "Excel": {
-      "processes": ["EXCEL.EXE"],
+      "processes": [
+        "EXCEL.EXE"
+      ],
       "icon": "📊",
       "priority": 1
     },
     "Word": {
-      "processes": ["WINWORD.EXE"],
+      "processes": [
+        "WINWORD.EXE"
+      ],
       "icon": "📝",
       "priority": 1
     },
     "WPS": {
-      "processes": ["wps.exe", "et.exe", "wpp.exe"],
+      "processes": [
+        "wps.exe",
+        "et.exe",
+        "wpp.exe"
+      ],
       "icon": "📝",
       "priority": 1
     }

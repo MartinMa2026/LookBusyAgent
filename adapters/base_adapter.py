@@ -58,3 +58,14 @@ class BaseAdapter(ABC):
             return self.llm.get_search_query()
         import random
         return random.choice(["季度报告模板", "数据分析方法", "工作计划表"])
+
+    def _get_code_snippet(self) -> str:
+        """获取 LLM 生成的代码片段（IDE/编辑器场景）"""
+        if self.llm and hasattr(self.llm, "get_code_snippet"):
+            return self.llm.get_code_snippet()
+        import random
+        return random.choice([
+            "def process_data(data):\n    result = []\n    for item in data:\n        if item.is_valid():\n            result.append(item.transform())\n    return result\n",
+            "class TaskScheduler:\n    def __init__(self):\n        self.tasks = []\n    def add_task(self, task):\n        self.tasks.append(task)\n",
+            "import re\nimport json\n\ndef parse_response(body: str) -> dict:\n    try:\n        return json.loads(body)\n    except Exception as e:\n        return {}\n"
+        ])
