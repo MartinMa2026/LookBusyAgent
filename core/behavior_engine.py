@@ -107,8 +107,7 @@ def dismiss_notification_popup():
     
     human_move(target_x, target_y, duration=0.3)
     time.sleep(random.uniform(0.1, 0.4))
-    human_click()
-    time.sleep(random.uniform(0.1, 0.3))
+    # 【已剥除鼠标盲点事件，避免点进 Word 等软件的最底层工具栏导致软件死锁卡顿】
     # 随机移回屏幕中央附近
     human_move(screen_width // 2 + random.randint(-200, 200), screen_height // 2 + random.randint(-200, 200), duration=0.4)
 
