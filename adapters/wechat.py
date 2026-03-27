@@ -47,14 +47,21 @@ class WeChatAdapter(BaseAdapter):
                     is_match = True
                     
             if is_match:
-                try:
-                    # 强过滤：只选有真实可视面积的窗口，过滤掉大量悬浮影子窗
-                    if win.width > 50 and win.height > 50:
+                # 强过滤尺寸，剔除阴影/画中画等幽灵窗
+                if win.width > 50 and win.height > 50:
+                    try:
+                        if getattr(win, 'isMinimized', False):
+                            win.restore()
+                        
+                        # 模拟轻按 alt 可以概率性骗过系统防抢焦点限制
+                        pyautogui.press('alt')
                         win.activate()
-                        time.sleep(random.uniform(0.3, 0.6))
-                        return True
-                except Exception:
-                    continue
+                    except Exception:
+                        # 很多时候其实由于 Windows Focus 限制它报错 0，但窗口已经切到位了
+                        pass
+                    
+                    time.sleep(random.uniform(0.3, 0.6))
+                    return True
         return False
 
     def _generate_behavior_chain(self) -> list:
