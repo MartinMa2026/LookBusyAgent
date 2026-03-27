@@ -119,7 +119,29 @@ class ExcelAdapter(BaseAdapter):
         import numbers
         return str(random.randint(1000, 99999))
 
+    def _action_fill_table(self):
+        count = random.randint(5, 15)
+        for _ in range(count):
+            if random.random() < 0.65:
+                content = self._get_number_str()
+                pyautogui.typewrite(content, interval=random.uniform(0.04, 0.1))
+            else:
+                kw = random.choice(["报表", "数据", "汇总", "分析", "用户", "完成"])
+                be.human_type_burst(kw)
+            time.sleep(0.05)
+            pyautogui.press('tab')
+            be.short_pause(0.05, 0.2)
 
+    def _action_type_data(self):
+        if random.random() < 0.6:
+            content = self._get_number_str()
+            pyautogui.typewrite(content, interval=random.uniform(0.05, 0.12))
+        else:
+            kw = random.choice(["财务", "核对", "报表"])
+            be.human_type_burst(kw)
+        time.sleep(0.1)
+        pyautogui.press('tab')
+        be.short_pause(0.2, 0.8)
 
     def _action_scroll(self):
         screen_w, screen_h = pyautogui.size()
