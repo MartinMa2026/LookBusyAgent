@@ -160,9 +160,12 @@ class LLMGenerator:
                              ('paragraph', para_prompt),
                              ('search', search_prompt)]:
             content = self._call_llm(prompt)
-            if content:
+            # 大模型可能会因为任务描述有“摸鱼”、“黑客”等词汇触发安全警报并返回“抱歉，无法提供”之类的拒绝语
+            if content and not any(r in content.lower() for r in ['sorry', '抱歉', '无法提供', '无法协助', '不能提供', "can't help"]):
                 lines = [l.strip() for l in content.strip().split('\n') if l.strip()]
-                new_cache[key] = lines
+                # 通常正常生成的列表至少会有多行，如果是单句且过短通常不正常
+                if len(lines) >= 3:
+                    new_cache[key] = lines
 
         with self._lock:
             for key, lines in new_cache.items():
