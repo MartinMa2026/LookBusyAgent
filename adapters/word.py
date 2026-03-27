@@ -68,18 +68,16 @@ class WordAdapter(BaseAdapter):
         return tmpl.format(kw=kw)
 
     def _generate_behavior_chain(self) -> list:
-        """生成一套具有连贯逻辑的文档撰写动作链（剧本）"""
+        """生成一套零极高仿真的文档查阅与审视动作链（零真实输入修改）"""
         chains = [
-            # 剧本1: 沉浸式创作 - 敲一段开头 -> 上下翻阅思考 -> 爆裂连续打字 -> 保存/格式化
-            ['type_paragraph', 'scroll', 'continuous_write', 'format_text'],
-            # 剧本2: 完美主义 - 撰写内容 -> 审读一会发现不对 -> 局部修改/删除 -> 重新补上内容
-            ['continuous_write', 'review_and_edit', 'type_paragraph'],
-            # 剧本3: 摸鱼翻阅 - 上下滚动查阅之前写的 -> 偶尔进行一次小修改 -> 继续翻阅
-            ['scroll', 'review_and_edit', 'scroll'],
-            # 剧本4: 缝合怪 - 切去别的地方找灵感(navigate) -> 回来大段输出 -> 排版
-            ['navigate', 'continuous_write', 'format_text'],
-            # 剧本5: 纯苦力 - 机械打字
-            ['type_paragraph', 'type_paragraph']
+            # 剧本1: 沉浸式审读 - 上下翻阅 -> 划选某段文字高亮 -> 停滞思考
+            ['scroll', 'select_text', 'stay_and_think'],
+            # 剧本2: 全文检索找错 - Ctrl+F 搜索关键词 -> 上下文比对 -> 关掉搜素
+            ['search_document', 'scroll', 'scroll'],
+            # 剧本3: 摸鱼翻页 - 连续上下滚动查阅之前写的 -> 偶尔进行一次微滑动
+            ['scroll', 'scroll', 'stay_and_think'],
+            # 剧本4: 缝合怪 - 切去别的地方找资料 -> 回来快速划选对比
+            ['navigate', 'scroll', 'select_text']
         ]
         return random.choice(chains)
 
@@ -93,16 +91,14 @@ class WordAdapter(BaseAdapter):
         action = self.action_queue.pop(0)
 
         try:
-            if action == 'continuous_write':
-                self._action_continuous_write()
-            elif action == 'type_paragraph':
-                self._action_type_paragraph()
+            if action == 'search_document':
+                self._action_search_document()
             elif action == 'scroll':
                 self._action_scroll()
-            elif action == 'format_text':
-                self._action_format_text()
-            elif action == 'review_and_edit':
-                self._action_review_and_edit()
+            elif action == 'select_text':
+                self._action_select_text()
+            elif action == 'stay_and_think':
+                self._action_stay_and_think()
             else:
                 self._action_navigate()
         except InterruptedError:
@@ -112,8 +108,30 @@ class WordAdapter(BaseAdapter):
 
         be.short_pause(0.3, 1.0)
 
-    def _action_continuous_write(self):
-        """连续写入 1~2 段（减少轮数避免垄断时间槽）"""
+    def _action_search_document(self):
+        """假装按 Ctrl+F 搜索某个关键词，没有任何物理修改破坏"""
+        pyautogui.hotkey('ctrl', 'f')
+        time.sleep(random.uniform(0.3, 0.6))
+        # 随机抽取本工作域内的词或随意打几个词
+        keywords = self._get_task_keywords()
+        query = random.choice(keywords) if keywords else random.choice(['报告', '总结', '数据', '分析'])
+        be.human_type(query)
+        be.short_pause(1.5, 3.0)
+        pyautogui.press('escape')  # 退出搜索框
+
+    def _action_stay_and_think(self):
+        """发呆思考"""
+        time.sleep(random.uniform(1.5, 3.5))
+
+    def _action_select_text(self):
+        """安全动作：按住 Shift 和方向键假装在高亮划选重点段落"""
+        pyautogui.keyDown('shift')
+        for _ in range(random.randint(4, 15)):
+            pyautogui.press(random.choice(['down', 'right', 'right']))
+            time.sleep(random.uniform(0.05, 0.15))
+        pyautogui.keyUp('shift')
+        time.sleep(random.uniform(1.0, 2.5))
+        pyautogui.press('left')  # 取消选区
         count = random.randint(1, 2)   # 从2-4减为1-2
         for i in range(count):
             text = self._get_paragraph() if random.random() < 0.4 else self._get_template_text()
@@ -122,13 +140,6 @@ class WordAdapter(BaseAdapter):
             pyautogui.press('enter')
             if i < count - 1:
                 be.short_pause(0.3, 0.8)
-
-    def _action_type_paragraph(self):
-        """流式打字一段"""
-        text = self._get_paragraph() if random.random() < 0.4 else self._get_template_text()
-        be.human_type(text)
-        be.short_pause(0.4, 1.2)
-        pyautogui.press('enter')
 
     def _action_review_and_edit(self):
         """向上滚动回顾，然后选中一行修改（模拟审稿）"""

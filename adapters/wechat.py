@@ -58,16 +58,16 @@ class WeChatAdapter(BaseAdapter):
             return False
 
     def _generate_behavior_chain(self) -> list:
-        """生成连贯的微信沟通动作链"""
+        """生成连贯且完全零发送风险的微信沟通查阅动作链"""
         chains = [
-            # 剧本1: 沉浸式回复 - 切换一次联系人 -> 快速回两句 -> 思考再回一句 -> 滑动看聊天记录
-            ['switch_chat', 'fake_type_burst', 'fake_type', 'scroll_read'],
-            # 剧本2: 爬楼看群 - 上下滚动看半天群消息 -> 切换另一个群继续看 -> 偶尔回一句短的
-            ['scroll_read', 'scroll_read', 'switch_chat', 'scroll_read', 'fake_type_burst'],
-            # 剧本3: 盯着屏幕看 - 啥也不干就在那仔细看某段聊天
-            ['scroll_read', 'just_look'],
-            # 剧本4: 连续输出长文 - 一直在那敲敲打打（随后全部删掉不发）
-            ['fake_type', 'fake_type']
+            # 剧本1: 搜历史记录 - 切联系人 -> Ctrl+F搜聊天记录 -> 上下滚动查阅
+            ['switch_chat', 'search_chat', 'scroll_read', 'scroll_read'],
+            # 剧本2: 爬楼看群 - 上下滚动看半天群消息 -> 切个群继续看
+            ['scroll_read', 'scroll_read', 'switch_chat', 'scroll_read'],
+            # 剧本3: 盯着屏幕看 - 啥也不干仔细看某段聊天 -> 然后搜个历史
+            ['scroll_read', 'just_look', 'search_chat'],
+            # 剧本4: 把群翻个底朝天 - 连续翻滚历史消息
+            ['switch_chat', 'scroll_read', 'scroll_read', 'scroll_read']
         ]
         return random.choice(chains)
 
@@ -81,11 +81,9 @@ class WeChatAdapter(BaseAdapter):
         action = self.action_queue.pop(0)
 
         try:
-            if action == 'fake_type_burst':
-                self._action_fake_type_burst()
-            elif action == 'fake_type':
-                self._action_fake_type()
-            elif action == 'scroll':
+            if action == 'search_chat':
+                self._action_search_chat()
+            elif action == 'scroll_read':
                 self._action_scroll()
             elif action == 'switch_chat':
                 self._action_switch_chat()
@@ -98,35 +96,18 @@ class WeChatAdapter(BaseAdapter):
 
         be.short_pause(0.3, 1.0)
 
-    def _action_fake_type_burst(self):
-        """快速输入1条回复（减少循环，让其他动作有机会执行）"""
-        screen_w, screen_h = pyautogui.size()
-        input_x = random.randint(int(screen_w * 0.4), int(screen_w * 0.75))
-        input_y = random.randint(int(screen_h * 0.85), int(screen_h * 0.93))
-        be.human_click(input_x, input_y)
-        be.short_pause(0.2, 0.4)
-
-        text = self._get_reply() if random.random() < 0.4 else random.choice(_FALLBACK_REPLIES)
-        be.human_type_burst(text)
-        be.short_pause(0.3, 0.7)
-        # 安全清空（绝不发送）
-        pyautogui.hotkey('ctrl', 'a')
-        time.sleep(0.05)
-        pyautogui.press('delete')
-
-    def _action_fake_type(self):
-        """在输入框流式打字，然后清空"""
-        screen_w, screen_h = pyautogui.size()
-        input_x = random.randint(int(screen_w * 0.4), int(screen_w * 0.75))
-        input_y = random.randint(int(screen_h * 0.85), int(screen_h * 0.93))
-        be.human_click(input_x, input_y)
-        be.short_pause(0.2, 0.5)
-        text = self._get_reply()
-        be.human_type(text)
-        be.short_pause(0.5, 1.5)
-        pyautogui.hotkey('ctrl', 'a')
-        time.sleep(0.05)
-        pyautogui.press('delete')
+    def _action_search_chat(self):
+        """极其安全逼真的动作：在当前聊天记录里按 Ctrl+F 搜索某个同事或事情"""
+        time.sleep(random.uniform(0.2, 0.5))
+        pyautogui.hotkey('ctrl', 'f')
+        be.short_pause(0.3, 0.6)
+        query = random.choice(['会议', '文件', '链接', 'PPT', '确认', '进度', '安排'])
+        be.human_type(query)
+        be.short_pause(1.5, 3.0)
+        # 退出搜索状态，不留痕迹
+        pyautogui.press('escape')
+        time.sleep(0.3)
+        pyautogui.press('escape')
 
     def _action_scroll(self):
         screen_w, screen_h = pyautogui.size()

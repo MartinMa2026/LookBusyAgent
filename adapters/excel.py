@@ -61,16 +61,16 @@ class ExcelAdapter(BaseAdapter):
         os.startfile(tmp.name)
 
     def _generate_behavior_chain(self) -> list:
-        """生成连贯的 Excel 录入/查阅动作链"""
+        """生成零风险的 Excel 沉浸式查阅动作链（不再修改任何单元格）"""
         chains = [
-            # 剧本1: 大量录入数据 - 选区 -> 咔咔填表 -> 下拉滚动核对
-            ['select_range', 'fill_table', 'scroll'],
-            # 剧本2: 走神看表 - 上下左右按键游动 -> 鼠标滚一滚 -> 偶尔打开菜单看一眼
-            ['navigate_cells', 'scroll', 'open_close_menu'],
-            # 剧本3: 局部修改 - 游走到某处 -> 填几个字 -> 继续游走
-            ['navigate_cells', 'type_data', 'navigate_cells'],
-            # 剧本4: 纯粹的连续填表狂魔
-            ['fill_table', 'fill_table', 'fill_table']
+            # 剧本1: 大盘查阅 - 选区高亮 -> 下推滚动核对 -> 全局搜索数据
+            ['select_range', 'scroll', 'search_data'],
+            # 剧本2: 走神看表 - 上下左右疯狂按键游动 -> 鼠标滚轮来回拨 -> 找一行字细看
+            ['navigate_cells', 'scroll', 'navigate_cells'],
+            # 剧本3: 核对核心数据 - 搜索 -> 游走 -> 搜索 -> 游走
+            ['search_data', 'navigate_cells', 'search_data', 'navigate_cells'],
+            # 剧本4: 发呆游荡 - 一只手按着方向键随便点点点
+            ['navigate_cells', 'navigate_cells', 'select_range']
         ]
         return random.choice(chains)
 
@@ -84,12 +84,10 @@ class ExcelAdapter(BaseAdapter):
         action = self.action_queue.pop(0)
 
         try:
-            if action == 'fill_table':
-                self._action_fill_table()
+            if action == 'search_data':
+                self._action_search_data()
             elif action == 'navigate_cells':
                 self._action_navigate_cells()
-            elif action == 'type_data':
-                self._action_type_data()
             elif action == 'scroll':
                 self._action_scroll()
             elif action == 'select_range':
@@ -103,45 +101,21 @@ class ExcelAdapter(BaseAdapter):
 
         be.short_pause(0.2, 0.8)
 
-    def _action_fill_table(self):
-        """✅ 新增：连续快速填入多个单元格，像在录数据"""
-        count = random.randint(5, 15)
-        for _ in range(count):
-            if random.random() < 0.65:
-                content = random.choice(_FAKE_NUMBERS)()
-                # 数字用 typewrite 更快更准
-                pyautogui.typewrite(content, interval=random.uniform(0.04, 0.1))
-            else:
-                kw = random.choice(_FAKE_HEADERS + self._get_task_keywords())
-                # ✅ 中文用 human_type_burst 避免乱码
-                be.human_type_burst(kw)
-            time.sleep(0.05)
-            pyautogui.press('tab')   # Tab 跳到下一格
-            be.short_pause(0.05, 0.2)
+    def _action_search_data(self):
+        """假装按 Ctrl+F 搜索某个数据，安全查阅"""
+        pyautogui.hotkey('ctrl', 'f')
+        time.sleep(random.uniform(0.3, 0.8))
+        query = random.choice([self._get_number_str(), "总计", "合计", "报表", "2024", "汇总"])
+        be.human_type(query)
+        be.short_pause(1.0, 2.5)
+        pyautogui.press('escape')  # 退出搜索框
+        time.sleep(0.5)
 
-        # 偶尔 Enter 换行
-        if random.random() < 0.5:
-            pyautogui.press('enter')
+    def _get_number_str(self):
+        import numbers
+        return str(random.randint(1000, 99999))
 
-    def _action_navigate_cells(self):
-        """方向键在单元格间快速移动"""
-        keys = ['right', 'right', 'down', 'left', 'down', 'right', 'up', 'tab']
-        for key in random.choices(keys, k=random.randint(5, 15)):
-            pyautogui.press(key)
-            time.sleep(random.uniform(0.06, 0.2))
-        be.short_pause(0.2, 0.8)
 
-    def _action_type_data(self):
-        """✅ 修复：用 human_type_burst 输入（支持中文）"""
-        if random.random() < 0.6:
-            content = random.choice(_FAKE_NUMBERS)()
-            pyautogui.typewrite(content, interval=random.uniform(0.05, 0.12))
-        else:
-            kw = random.choice(_FAKE_HEADERS + self._get_task_keywords())
-            be.human_type_burst(kw)   # ✅ 修复中文乱码
-        time.sleep(0.1)
-        pyautogui.press('tab')
-        be.short_pause(0.2, 0.8)
 
     def _action_scroll(self):
         screen_w, screen_h = pyautogui.size()

@@ -39,16 +39,16 @@ class CoderAdapter(BaseAdapter):
             return False
 
     def _generate_behavior_chain(self) -> list:
-        """生成连贯的写代码动作链"""
+        """生成绝对安全的查阅/分析代码动作链（零真实修改）"""
         chains = [
-            # 剧本1: 正常撸代码 - 思考审阅 -> 连敲代码 -> 随手保存 -> 切文件
-            ['scroll_read', 'type_code', 'format_code', 'switch_file'],
-            # 剧本2: 写错重构 - 写着写着 -> 翻页看下 -> 删掉重写
-            ['type_code', 'scroll_read', 'type_code', 'format_code'],
-            # 剧本3: 看查阅代码 - 切来翻去只读不写
-            ['switch_file', 'scroll_read', 'scroll_read'],
-            # 剧本4: 极速开发 - 一直写一直存
-            ['type_code', 'format_code', 'type_code', 'format_code']
+            # 剧本1: 全局找Bug - 切文件 -> Ctrl+F搜代码 -> 上下翻阅 -> 划选某段
+            ['switch_file', 'search_code', 'scroll_read', 'select_code'],
+            # 剧本2: 代码审查 - 上下滚动一行行看 -> 划选重点 -> 继续滚
+            ['scroll_read', 'select_code', 'scroll_read'],
+            # 剧本3: 找调用链路 - 不断在多个文件中切来切去扫视
+            ['switch_file', 'scroll_read', 'switch_file', 'search_code'],
+            # 剧本4: 发呆沉思 - 盯屏幕偶尔划选
+            ['scroll_read', 'select_code', 'select_code']
         ]
         return random.choice(chains)
 
@@ -62,14 +62,14 @@ class CoderAdapter(BaseAdapter):
         action = self.action_queue.pop(0)
 
         try:
-            if action == 'type_code':
-                self._action_type_code()
+            if action == 'search_code':
+                self._action_search_code()
             elif action == 'scroll_read':
                 self._action_scroll_read()
             elif action == 'switch_file':
                 self._action_switch_file()
             else:
-                self._action_format_code()
+                self._action_select_code()
         except InterruptedError:
             raise
         except Exception as e:
@@ -77,24 +77,33 @@ class CoderAdapter(BaseAdapter):
 
         be.short_pause(0.2, 0.8)
 
-    def _action_type_code(self):
-        """拉取真实代码段并写入"""
-        code_snippet = self._get_code_snippet()
-        be.human_type(code_snippet)
+    def _action_search_code(self):
+        """假装按 Ctrl+F 搜索某个变量或函数，不修改文件"""
+        pyautogui.hotkey('ctrl', 'f')
+        time.sleep(random.uniform(0.2, 0.5))
+        be.human_type(random.choice(['process', 'load_data', 'update', 'main', 'config', 'user_id', 'init']))
+        be.short_pause(1.0, 2.5)
+        pyautogui.press('escape')  # 退出搜索框
 
     def _action_scroll_read(self):
         """假装在思考和上下滚动审视代码"""
-        time.sleep(random.uniform(1.0, 3.0))
-        be.human_scroll(random.randint(6, 15))
+        time.sleep(random.uniform(1.0, 2.5))
+        be.human_scroll(random.randint(4, 12))
         time.sleep(random.uniform(0.5, 1.5))
 
     def _action_switch_file(self):
-        """模拟 Ctrl + Tab 或者 Ctrl+P 等快捷键查阅其它源文件"""
+        """模拟 Ctrl + Tab 或者其他系统级切换键查阅源文件"""
         pyautogui.hotkey('ctrl', 'tab')
         time.sleep(random.uniform(0.5, 1.0))
-        be.human_scroll()
+        be.human_scroll(random.randint(2, 5))
 
-    def _action_format_code(self):
-        """好习惯：随手 Ctrl+S 保存或调用格式化快捷键"""
-        pyautogui.hotkey('ctrl', 's')
-        time.sleep(1.0)
+    def _action_select_code(self):
+        """安全动作：按住 Shift 和方向键假装在高亮划选某几行代码以辅助思考"""
+        pyautogui.keyDown('shift')
+        for _ in range(random.randint(2, 6)):
+            pyautogui.press(random.choice(['down', 'right']))
+            time.sleep(random.uniform(0.05, 0.2))
+        pyautogui.keyUp('shift')
+        time.sleep(random.uniform(0.5, 1.5))
+        # 随便点一下取消高亮
+        pyautogui.press('left')
