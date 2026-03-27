@@ -129,7 +129,17 @@ class ExcelAdapter(BaseAdapter):
                 kw = random.choice(["报表", "数据", "汇总", "分析", "用户", "完成"])
                 be.human_type_burst(kw)
             time.sleep(0.05)
-            pyautogui.press('tab')
+            
+            # 使用更逼真的矩阵式换行游走，而非无限向右延伸
+            if random.random() < 0.7:
+                pyautogui.press('tab')
+            else:
+                pyautogui.press('enter')
+                time.sleep(0.1)
+                for _ in range(random.randint(1, 4)):
+                    pyautogui.press('left')
+                    time.sleep(random.uniform(0.05, 0.15))
+            
             be.short_pause(0.05, 0.2)
 
     def _action_type_data(self):
@@ -140,7 +150,10 @@ class ExcelAdapter(BaseAdapter):
             kw = random.choice(["财务", "核对", "报表"])
             be.human_type_burst(kw)
         time.sleep(0.1)
-        pyautogui.press('tab')
+        if random.random() < 0.5:
+            pyautogui.press('tab')
+        else:
+            pyautogui.press('enter')
         be.short_pause(0.2, 0.8)
 
     def _action_navigate_cells(self):
