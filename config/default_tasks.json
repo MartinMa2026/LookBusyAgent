@@ -38,13 +38,6 @@
       "icon": "💬",
       "priority": 0
     },
-    "企业微信": {
-      "processes": [
-        "WXWork.exe"
-      ],
-      "icon": "💼",
-      "priority": 0
-    },
     "Chrome": {
       "processes": [
         "chrome.exe"
