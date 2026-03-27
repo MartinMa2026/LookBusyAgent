@@ -143,6 +143,13 @@ class ExcelAdapter(BaseAdapter):
         pyautogui.press('tab')
         be.short_pause(0.2, 0.8)
 
+    def _action_navigate_cells(self):
+        """假装在浏览单元格数据（不停按方向键在多处游走审阅）"""
+        for _ in range(random.randint(5, 15)):
+            pyautogui.press(random.choice(['up', 'down', 'left', 'right', 'down', 'right']))
+            time.sleep(random.uniform(0.05, 0.2))
+        be.short_pause(0.2, 0.8)
+
     def _action_scroll(self):
         screen_w, screen_h = pyautogui.size()
         be.human_move(
