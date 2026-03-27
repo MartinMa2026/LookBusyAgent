@@ -32,9 +32,14 @@ class WordAdapter(BaseAdapter):
     def _find_window(self):
         for win in gw.getAllWindows():
             t = win.title.lower()
-            if ('word' in t or '.docx' in t or '.doc' in t
-                    or ('wps' in t and 'writer' in t)):
-                return win
+            # 阻止 WPS 和 Word 互相冒名顶替
+            if self.app_name.upper() == "WPS" or "wps" in self.app_name.lower():
+                if 'wps' in t:
+                    return win
+            else:
+                # 预期是 Microsoft Word，必须排除被 WPS 托管的文档
+                if ('word' in t or '.docx' in t or '.doc' in t) and 'wps' not in t:
+                    return win
         return None
 
     def _activate_window(self) -> bool:
