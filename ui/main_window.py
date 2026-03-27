@@ -557,7 +557,9 @@ class MainWindow:
         self.hotkey_manager.start()
 
     def _toggle_simulation(self):
-        if not self._running:
+        if getattr(self.hotkey_manager, '_paused', False):
+            self.hotkey_manager._resume()
+        elif not self._running:
             self._start_simulation()
         else:
             self._stop_simulation()
@@ -615,6 +617,12 @@ class MainWindow:
     def _update_ui_resumed(self):
         self.status_var.set(f'RESUMED  ▶  老板键: {self.hotkey_manager.combo}')
         self.start_btn.configure_text('■  STOP FISHING  //  停止摸鱼', color=C['red'])
+        
+        # 修复线程死亡：按下老板键时，旧的 Scheduler 线程在内部 while 中截获了 stop_event 已经退出了！
+        # 若是热键或鼠标点击恢复，必须重新拉起一个全新线程，否则程序只是更改了 UI 但后台根本没动作
+        if getattr(self, 'scheduler', None):
+            if not getattr(self.scheduler, '_thread', None) or not self.scheduler._thread.is_alive():
+                self._start_simulation()
 
     def _sync_llm_config(self):
         config_path = os.path.normpath(
