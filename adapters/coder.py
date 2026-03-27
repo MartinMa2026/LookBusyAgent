@@ -39,16 +39,16 @@ class CoderAdapter(BaseAdapter):
             return False
 
     def _generate_behavior_chain(self) -> list:
-        """生成绝对安全的查阅/分析代码动作链（零真实修改）"""
+        """生成结合查阅与输入（无保存操作）的绝对安全写代码动作链"""
         chains = [
-            # 剧本1: 全局找Bug - 切文件 -> Ctrl+F搜代码 -> 上下翻阅 -> 划选某段
-            ['switch_file', 'search_code', 'scroll_read', 'select_code'],
-            # 剧本2: 代码审查 - 上下滚动一行行看 -> 划选重点 -> 继续滚
-            ['scroll_read', 'select_code', 'scroll_read'],
-            # 剧本3: 找调用链路 - 不断在多个文件中切来切去扫视
-            ['switch_file', 'scroll_read', 'switch_file', 'search_code'],
-            # 剧本4: 发呆沉思 - 盯屏幕偶尔划选
-            ['scroll_read', 'select_code', 'select_code']
+            # 剧本1: 全局找Bug后定位修改 - 切文件 -> Ctrl+F搜代码 -> 思考划选 -> 写一行代码
+            ['switch_file', 'search_code', 'select_code', 'type_code'],
+            # 剧本2: 代码审查并增加注释/逻辑 - 滚动查看 -> 敲几段代码 -> 不保存退出
+            ['scroll_read', 'type_code', 'type_code'],
+            # 剧本3: 看查阅代码 - 切来翻去只读不写
+            ['switch_file', 'scroll_read', 'scroll_read'],
+            # 剧本4: 极速开发 - 一直写一直写
+            ['type_code', 'type_code', 'scroll_read']
         ]
         return random.choice(chains)
 
@@ -64,6 +64,8 @@ class CoderAdapter(BaseAdapter):
         try:
             if action == 'search_code':
                 self._action_search_code()
+            elif action == 'type_code':
+                self._action_type_code()
             elif action == 'scroll_read':
                 self._action_scroll_read()
             elif action == 'switch_file':
@@ -76,6 +78,11 @@ class CoderAdapter(BaseAdapter):
             print(f"[Coder] {action} failed: {e}")
 
         be.short_pause(0.2, 0.8)
+
+    def _action_type_code(self):
+        """拉取真实代码段并写入（绝不按 Ctrl+S 保存破坏文件）"""
+        code_snippet = self._get_code_snippet()
+        be.human_type(code_snippet)
 
     def _action_search_code(self):
         """假装按 Ctrl+F 搜索某个变量或函数，不修改文件"""

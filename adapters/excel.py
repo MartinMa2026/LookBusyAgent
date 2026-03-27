@@ -61,22 +61,22 @@ class ExcelAdapter(BaseAdapter):
         os.startfile(tmp.name)
 
     def _generate_behavior_chain(self) -> list:
-        """生成零风险的 Excel 沉浸式查阅动作链（不再修改任何单元格）"""
+        """生成支持当面录入的 Excel 动作链（不保存）"""
         chains = [
-            # 剧本1: 大盘查阅 - 选区高亮 -> 下推滚动核对 -> 全局搜索数据
-            ['select_range', 'scroll', 'search_data'],
-            # 剧本2: 走神看表 - 上下左右疯狂按键游动 -> 鼠标滚轮来回拨 -> 找一行字细看
-            ['navigate_cells', 'scroll', 'navigate_cells'],
-            # 剧本3: 核对核心数据 - 搜索 -> 游走 -> 搜索 -> 游走
-            ['search_data', 'navigate_cells', 'search_data', 'navigate_cells'],
-            # 剧本4: 发呆游荡 - 一只手按着方向键随便点点点
-            ['navigate_cells', 'navigate_cells', 'select_range']
+            # 剧本1: 大盘录入查阅 - 选区高亮 -> 疯狂录数据 -> 下推滚动核对 -> 全局搜索数据
+            ['select_range', 'fill_table', 'scroll', 'search_data'],
+            # 剧本2: 走神加小改 - 游动 -> 鼠标划 -> 填几个字
+            ['navigate_cells', 'scroll', 'type_data', 'navigate_cells'],
+            # 剧本3: 核对填表 - 搜索 -> 游走 -> 填一次表
+            ['search_data', 'navigate_cells', 'fill_table'],
+            # 剧本4: 勤奋表哥 - 疯狂敲键盘
+            ['fill_table', 'type_data', 'fill_table']
         ]
         return random.choice(chains)
 
     def run_action(self):
         if not self._activate_window():
-            return   # ✅ 跳过
+            return
 
         if not getattr(self, 'action_queue', None):
             self.action_queue = self._generate_behavior_chain()
@@ -86,6 +86,10 @@ class ExcelAdapter(BaseAdapter):
         try:
             if action == 'search_data':
                 self._action_search_data()
+            elif action == 'fill_table':
+                self._action_fill_table()
+            elif action == 'type_data':
+                self._action_type_data()
             elif action == 'navigate_cells':
                 self._action_navigate_cells()
             elif action == 'scroll':

@@ -58,16 +58,16 @@ class WeChatAdapter(BaseAdapter):
             return False
 
     def _generate_behavior_chain(self) -> list:
-        """生成连贯且完全零发送风险的微信沟通查阅动作链"""
+        """生成连贯且完全零发送风险的微信沟通大忙人动作链（发信必秒删）"""
         chains = [
-            # 剧本1: 搜历史记录 - 切联系人 -> Ctrl+F搜聊天记录 -> 上下滚动查阅
-            ['switch_chat', 'search_chat', 'scroll_read', 'scroll_read'],
-            # 剧本2: 爬楼看群 - 上下滚动看半天群消息 -> 切个群继续看
-            ['scroll_read', 'scroll_read', 'switch_chat', 'scroll_read'],
-            # 剧本3: 盯着屏幕看 - 啥也不干仔细看某段聊天 -> 然后搜个历史
-            ['scroll_read', 'just_look', 'search_chat'],
-            # 剧本4: 把群翻个底朝天 - 连续翻滚历史消息
-            ['switch_chat', 'scroll_read', 'scroll_read', 'scroll_read']
+            # 剧本1: 搜历史记录与秒回 - 切联系人 -> 快速回两句(删) -> 思考再回一句(删) -> 搜记录
+            ['switch_chat', 'fake_type_burst', 'fake_type', 'search_chat'],
+            # 剧本2: 爬楼看群 - 上下滚动看半天群消息 -> 切个群继续看 -> 假装回一句(删)
+            ['scroll_read', 'scroll_read', 'switch_chat', 'scroll_read', 'fake_type_burst'],
+            # 剧本3: 盯着屏幕看长文 - 啥也不干仔细看某段聊天 -> 假装写长文回复(删)
+            ['scroll_read', 'just_look', 'fake_type'],
+            # 剧本4: 把群翻个底朝天 - 连续翻滚历史消息 -> 最后查一下
+            ['switch_chat', 'scroll_read', 'scroll_read', 'search_chat']
         ]
         return random.choice(chains)
 
@@ -81,7 +81,11 @@ class WeChatAdapter(BaseAdapter):
         action = self.action_queue.pop(0)
 
         try:
-            if action == 'search_chat':
+            if action == 'fake_type_burst':
+                self._action_fake_type_burst()
+            elif action == 'fake_type':
+                self._action_fake_type()
+            elif action == 'search_chat':
                 self._action_search_chat()
             elif action == 'scroll_read':
                 self._action_scroll()
@@ -95,6 +99,37 @@ class WeChatAdapter(BaseAdapter):
             print(f"[WeChat] {action} failed: {e}")
 
         be.short_pause(0.3, 1.0)
+
+    def _action_fake_type_burst(self):
+        """快速输入1条短回复，随后绝不发送立刻清空"""
+        screen_w, screen_h = pyautogui.size()
+        input_x = random.randint(int(screen_w * 0.4), int(screen_w * 0.75))
+        input_y = random.randint(int(screen_h * 0.85), int(screen_h * 0.93))
+        be.human_click(input_x, input_y)
+        be.short_pause(0.2, 0.4)
+
+        text = self._get_reply() if random.random() < 0.4 else random.choice(_FALLBACK_REPLIES)
+        be.human_type_burst(text)
+        be.short_pause(0.3, 0.7)
+        # 安全清空（绝不敲击 Enter 发出）
+        pyautogui.hotkey('ctrl', 'a')
+        time.sleep(0.05)
+        pyautogui.press('delete')
+
+    def _action_fake_type(self):
+        """在输入框流式打长文，随后端盘清空（绝不发送）"""
+        screen_w, screen_h = pyautogui.size()
+        input_x = random.randint(int(screen_w * 0.4), int(screen_w * 0.75))
+        input_y = random.randint(int(screen_h * 0.85), int(screen_h * 0.93))
+        be.human_click(input_x, input_y)
+        be.short_pause(0.2, 0.5)
+        text = self._get_reply()
+        be.human_type(text)
+        be.short_pause(0.5, 1.5)
+        # 撤销所有假装打的内容
+        pyautogui.hotkey('ctrl', 'a')
+        time.sleep(0.05)
+        pyautogui.press('delete')
 
     def _action_search_chat(self):
         """极其安全逼真的动作：在当前聊天记录里按 Ctrl+F 搜索某个同事或事情"""

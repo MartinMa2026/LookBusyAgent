@@ -68,22 +68,22 @@ class WordAdapter(BaseAdapter):
         return tmpl.format(kw=kw)
 
     def _generate_behavior_chain(self) -> list:
-        """生成一套零极高仿真的文档查阅与审视动作链（零真实输入修改）"""
+        """生成一套不仅查阅还会当面大段敲字的动作链（绝对不触发 Ctrl+S）"""
         chains = [
-            # 剧本1: 沉浸式审读 - 上下翻阅 -> 划选某段文字高亮 -> 停滞思考
-            ['scroll', 'select_text', 'stay_and_think'],
-            # 剧本2: 全文检索找错 - Ctrl+F 搜索关键词 -> 上下文比对 -> 关掉搜素
-            ['search_document', 'scroll', 'scroll'],
-            # 剧本3: 摸鱼翻页 - 连续上下滚动查阅之前写的 -> 偶尔进行一次微滑动
-            ['scroll', 'scroll', 'stay_and_think'],
-            # 剧本4: 缝合怪 - 切去别的地方找资料 -> 回来快速划选对比
-            ['navigate', 'scroll', 'select_text']
+            # 剧本1: 沉浸式创作 - 敲一段开头 -> 上下翻阅思考 -> 爆裂连续文字输出
+            ['type_paragraph', 'scroll', 'continuous_write', 'search_document'],
+            # 剧本2: 边搜边写 - Ctrl+F搜索 -> 滑动比对 -> 敲一行字
+            ['search_document', 'scroll', 'type_paragraph'],
+            # 剧本3: 完美主义 - 爆裂输出 -> 选取高亮检查 -> 接着输出
+            ['continuous_write', 'select_text', 'type_paragraph'],
+            # 剧本4: 行云流水打字 - 纯纯的键盘生产力
+            ['type_paragraph', 'continuous_write']
         ]
         return random.choice(chains)
 
     def run_action(self):
         if not self._activate_window():
-            return   # ✅ 跳过
+            return
 
         if not getattr(self, 'action_queue', None):
             self.action_queue = self._generate_behavior_chain()
@@ -93,6 +93,10 @@ class WordAdapter(BaseAdapter):
         try:
             if action == 'search_document':
                 self._action_search_document()
+            elif action == 'continuous_write':
+                self._action_continuous_write()
+            elif action == 'type_paragraph':
+                self._action_type_paragraph()
             elif action == 'scroll':
                 self._action_scroll()
             elif action == 'select_text':
@@ -132,19 +136,26 @@ class WordAdapter(BaseAdapter):
         pyautogui.keyUp('shift')
         time.sleep(random.uniform(1.0, 2.5))
         pyautogui.press('left')  # 取消选区
-        count = random.randint(1, 2)   # 从2-4减为1-2
+
+    def _action_continuous_write(self):
+        """连续写入文字（绝不执行保存指令）"""
+        count = random.randint(1, 2)
         for i in range(count):
             text = self._get_paragraph() if random.random() < 0.4 else self._get_template_text()
             be.human_type(text)
-            time.sleep(0.1)
-            pyautogui.press('enter')
             if i < count - 1:
                 be.short_pause(0.3, 0.8)
 
+    def _action_type_paragraph(self):
+        """流式打字一段文字（仅敲打不保存）"""
+        text = self._get_paragraph() if random.random() < 0.4 else self._get_template_text()
+        be.human_type(text)
+        be.short_pause(0.4, 1.2)
+        pyautogui.press('enter')
     def _action_review_and_edit(self):
         """向上滚动回顾，然后选中一行修改（模拟审稿）"""
         be.human_scroll(clicks=random.randint(5, 12), direction='up')
-        be.short_pause(0.5, 1.5)
+        time.sleep(random.uniform(0.5, 1.2))
         # 移动光标到某行
         for _ in range(random.randint(2, 5)):
             pyautogui.press('down')
