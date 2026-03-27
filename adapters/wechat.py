@@ -29,33 +29,33 @@ class WeChatAdapter(BaseAdapter):
         super().__init__(app_name, task_description, stop_event, llm)
         self._process_names = {"微信": "WeChat", "企业微信": "WXWork"}
 
-    def _find_window(self):
+    def _activate_window(self) -> bool:
         for win in gw.getAllWindows():
-            t = win.title
-            # 黑名单屏蔽部分浏览器和文件夹包含该关键词的情况
+            t = win.title.strip()
+            if not t:
+                continue
             if any(b in t for b in ['Chrome', 'Edge', 'Firefox', 'LookBusyAgent']):
                 continue
             
+            is_match = False
             if self.app_name == "企业微信":
-                # 企业微信的窗口名稳定为 "企业微信"
-                if t == "企业微信":
-                    return win
+                # 放宽对企业微信的识别条件，很多被拆出的独立聊天、或者是附属服务都包含这四个字
+                if '企业微信' in t or 'wxwork' in t.lower():
+                    is_match = True
             else:
-                # 普通微信的窗口名为 "微信" 或 "WeChat"
                 if t == "微信" or t.lower() == "wechat":
-                    return win
-        return None
-
-    def _activate_window(self) -> bool:
-        win = self._find_window()
-        if not win:
-            return False   # ✅ 直接跳过，不等待
-        try:
-            win.activate()
-            time.sleep(random.uniform(0.3, 0.6))
-            return True
-        except Exception:
-            return False
+                    is_match = True
+                    
+            if is_match:
+                try:
+                    # 强过滤：只选有真实可视面积的窗口，过滤掉大量悬浮影子窗
+                    if win.width > 50 and win.height > 50:
+                        win.activate()
+                        time.sleep(random.uniform(0.3, 0.6))
+                        return True
+                except Exception:
+                    continue
+        return False
 
     def _generate_behavior_chain(self) -> list:
         """生成连贯且完全零发送风险的微信沟通大忙人动作链（发信必秒删）"""
