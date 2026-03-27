@@ -72,15 +72,6 @@
       ],
       "icon": "📝",
       "priority": 1
-    },
-    "WPS": {
-      "processes": [
-        "wps.exe",
-        "et.exe",
-        "wpp.exe"
-      ],
-      "icon": "📝",
-      "priority": 1
     }
   }
 }
