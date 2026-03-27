@@ -121,17 +121,20 @@ class Scheduler:
             slot_end = time.time() + slot_duration
 
             try:
-                while time.time() < slot_end and not self.stop_event.is_set():
+                while not self.stop_event.is_set():
                     adapter.run_action()
                     behavior_engine.maybe_long_pause(probability=0.005)
                     
-                    # 10% 概率加入一次防休眠微小抖动
                     if random.random() < 0.1:
                         behavior_engine.anti_sleep_jitter()
-                    
-                    # 1% 极小概率模拟清理右下角弹窗通知
                     if random.random() < 0.01:
                         behavior_engine.dismiss_notification_popup()
+
+                    # 当随机分配的时间片耗尽 时刻，并且当前软件的连贯剧本刚好执行完毕（队列为空）才允许切换软件
+                    queue = getattr(adapter, 'action_queue', [])
+                    if time.time() >= slot_end and not queue:
+                        break
+
             except InterruptedError:
                 break
             except Exception as e:
