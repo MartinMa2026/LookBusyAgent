@@ -24,6 +24,13 @@ _FALLBACK_REPLIES = [
 
 
 class WeChatAdapter(BaseAdapter):
+    META = {
+        "names": ["微信", "企业微信"],
+        "processes": ["WeChat.exe", "WXWork.exe"],
+        "icon": "💬",
+        "priority": 0
+    }
+
 
     def __init__(self, app_name: str, task_description: str, stop_event, llm=None):
         super().__init__(app_name, task_description, stop_event, llm)

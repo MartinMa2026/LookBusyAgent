@@ -86,7 +86,7 @@ python main.py
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconfirm --onefile --windowed --icon "assets/icon.ico" --add-data "config;config" --add-data "assets;assets" main.py -n LookBusyAgent
+pyinstaller --noconfirm --onefile --windowed --icon "assets/icon.ico" --add-data "config;config" --add-data "assets;assets" --collect-submodules adapters main.py -n LookBusyAgent
 ```
 
 生成的完整可携式单体 EXE 文件位于 `dist/` 目录。

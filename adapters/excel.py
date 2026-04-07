@@ -28,6 +28,13 @@ _FAKE_HEADERS = ["Q1", "Q2", "Q3", "Q4", "季度", "合计", "占比",
 
 
 class ExcelAdapter(BaseAdapter):
+    META = {
+        "names": ["Excel"],
+        "processes": ["EXCEL.EXE"],
+        "icon": "📊",
+        "priority": 1
+    }
+
 
     def _find_window(self):
         for win in gw.getAllWindows():

@@ -13,6 +13,13 @@ from core import behavior_engine as be
 
 
 class CoderAdapter(BaseAdapter):
+    META = {
+        "names": ["IDE/编辑器", "VSCode", "代码"],
+        "processes": ["Code.exe", "idea64.exe", "pycharm64.exe", "webstorm64.exe", "goland64.exe"],
+        "icon": "💻",
+        "priority": 2
+    }
+
 
     def _find_window(self):
         for win in gw.getAllWindows():

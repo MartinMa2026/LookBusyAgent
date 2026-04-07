@@ -27,6 +27,13 @@ def _load_browser_urls():
 
 
 class BrowserAdapter(BaseAdapter):
+    META = {
+        "names": ["Chrome", "Edge"],
+        "processes": ["chrome.exe", "msedge.exe"],
+        "icon": "🌐",
+        "priority": 0
+    }
+
 
     def __init__(self, app_name: str, task_description: str, stop_event, llm=None):
         super().__init__(app_name, task_description, stop_event, llm)

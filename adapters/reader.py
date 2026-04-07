@@ -12,6 +12,13 @@ from adapters.base_adapter import BaseAdapter
 from core import behavior_engine as be
 
 class ReaderAdapter(BaseAdapter):
+    META = {
+        "names": ["阅读器", "PDF", "笔记"],
+        "processes": ["AcroRd32.exe", "FoxitReader.exe", "Notion.exe", "WeRead.exe"],
+        "icon": "📖",
+        "priority": 2
+    }
+
 
     def _find_window(self):
         keywords = ['acrobat', 'sumatra', 'pdf', 'notion', 'obsidian', 'foxit', '阅读', '笔记']

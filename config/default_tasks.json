@@ -30,42 +30,5 @@
     "https://notion.so",
     "https://github.com"
   ],
-  "known_apps": {
-    "微信": {
-      "processes": [
-        "WeChat.exe"
-      ],
-      "icon": "💬",
-      "priority": 0
-    },
-    "Chrome": {
-      "processes": [
-        "chrome.exe"
-      ],
-      "icon": "🌐",
-      "priority": 0
-    },
-    "Edge": {
-      "processes": [
-        "msedge.exe"
-      ],
-      "icon": "🌐",
-      "priority": 0
-    },
-    "Excel": {
-      "processes": [
-        "EXCEL.EXE"
-      ],
-      "icon": "📊",
-      "priority": 1
-    },
-    "Word": {
-      "processes": [
-        "WINWORD.EXE"
-      ],
-      "icon": "📝",
-      "priority": 1
-    }
-  },
   "language": "JA"
 }

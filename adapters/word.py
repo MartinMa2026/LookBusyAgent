@@ -28,6 +28,13 @@ _PARAGRAPH_TEMPLATES = [
 
 
 class WordAdapter(BaseAdapter):
+    META = {
+        "names": ["Word", "WPS"],
+        "processes": ["WINWORD.EXE", "wps.exe"],
+        "icon": "📝",
+        "priority": 1
+    }
+
 
     def _find_window(self):
         for win in gw.getAllWindows():

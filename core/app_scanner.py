@@ -18,12 +18,9 @@ except ImportError:
 
 
 def _load_known_apps():
-    """加载 config/default_tasks.json 中的已知软件列表"""
-    config_path = get_config_path()
-    config_path = os.path.normpath(config_path)
-    with open(config_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return data.get('known_apps', {})
+    """从适配器注册中心获取动态加载的软体元数据聚合"""
+    from adapters.registry import get_all_app_metas
+    return get_all_app_metas()
 
 
 def _get_running_processes():

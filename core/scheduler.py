@@ -51,32 +51,11 @@ class Scheduler:
     # ── 适配器加载 ──────────────────────────────────────────
 
     def _load_adapters(self):
-        from adapters.wechat  import WeChatAdapter
-        from adapters.browser import BrowserAdapter
-        from adapters.excel   import ExcelAdapter
-        from adapters.word    import WordAdapter
-        from adapters.coder   import CoderAdapter
-        from adapters.reader  import ReaderAdapter
-
-        adapter_map = {
-            "微信":   WeChatAdapter,
-            "企业微信": WeChatAdapter,
-            "Chrome": BrowserAdapter,
-            "Edge":   BrowserAdapter,
-            "Excel":  ExcelAdapter,
-            "Word":   WordAdapter,
-            "WPS":    WordAdapter,
-            "IDE/编辑器": CoderAdapter,
-            "VSCode": CoderAdapter,
-            "代码": CoderAdapter,
-            "阅读器": ReaderAdapter,
-            "PDF": ReaderAdapter,
-            "笔记": ReaderAdapter,
-        }
+        from adapters.registry import get_adapter_class
 
         self._adapters = {}
         for app in self.app_weights:
-            cls = adapter_map.get(app)
+            cls = get_adapter_class(app)
             if cls:
                 self._adapters[app] = cls(
                     app_name=app,
