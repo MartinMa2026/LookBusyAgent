@@ -1,3 +1,4 @@
+from core.utils import get_config_path, get_resource_path
 """
 app_scanner.py
 扫描 Windows 系统中已安装和正在运行的已知办公软件。
@@ -18,7 +19,7 @@ except ImportError:
 
 def _load_known_apps():
     """加载 config/default_tasks.json 中的已知软件列表"""
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'default_tasks.json')
+    config_path = get_config_path()
     config_path = os.path.normpath(config_path)
     with open(config_path, 'r', encoding='utf-8') as f:
         data = json.load(f)

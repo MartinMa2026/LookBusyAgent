@@ -1,3 +1,4 @@
+from core.utils import get_config_path, get_resource_path
 """
 scheduler.py
 多软件任务调度器：按权重加权随机选择并执行各软件适配器。
@@ -14,7 +15,7 @@ from core.llm_generator import LLMGenerator
 
 def _load_config():
     config_path = os.path.normpath(
-        os.path.join(os.path.dirname(__file__), '..', 'config', 'default_tasks.json'))
+        get_config_path())
     with open(config_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 

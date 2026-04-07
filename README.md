@@ -4,6 +4,12 @@
 
 ---
 
+## 🌟 最新特性
+
+- **多语言秒切**：内置中文(ZH) / 英文(EN) / 日文(JA) 三语言字典，UI 界面一点即换，无缝热更新。
+- **免环境纯净版**：支持直接打包为纯正单文件 `.exe`，内置精致像素风「喝咖啡摸鱼」图标，即查即用，无需配置 Python 依赖。
+- **配置持久便携化**：打包后的软件以“U 盘绿色形态”运行。运行目录会自动生成伴生 `lookbusy_config.json` 来保存个人自定义设置，换电脑拷走即用。
+
 ## 功能
 
 - 🔍 **自动扫描**系统中已安装的办公软件
@@ -22,24 +28,24 @@
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 源码模式（需依赖）
 
 ```bash
 pip install -r requirements.txt
-```
-
-### 2. 运行
-
-```bash
 python main.py
 ```
 
-### 3. 使用
+### 2. 免安装单机版使用（独立运行版）
 
-1. 填写"今天在干什么"（可选，用于生成更贴合的内容）
+如已下载 `.exe` 版本，直接双击运行即可，配套自定义配置将自动储存在同级目录下的 `lookbusy_config.json` 中。
+
+## 配置与操作流程
+
+1. 填写"我是谁 / 在做啥"（可选，用于让 LLM 生成更贴合场景的内容）
 2. 勾选今天要"工作"的软件
 3. 填写 LLM API Key（可选，填了打出来的字更自然）
-4. 点击「🚀 开始摸鱼」
+4. 在顶部选择所需的当地语言配置 `[ZH]` `[EN]` `[JA]`
+5. 点击「🚀 开始摸鱼」
 
 ## LLM 配置（可选）
 
@@ -53,7 +59,7 @@ python main.py
 
 > 不填 API Key 时自动使用内置模板，完全离线可用。
 
-也可以直接编辑 `config/default_tasks.json`：
+也可以直接编辑 `config/default_tasks.json` 或 `lookbusy_config.json`（对应单文件版）：
 
 ```json
 {
@@ -74,14 +80,16 @@ python main.py
 
 可以在 UI 界面自定义快捷键。
 
-## 打包为 EXE
+## 自己打包为最终 EXE
+
+可随时使用 PyInstaller 编译纯净绿色单文件：
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name "LookBusyAgent" main.py
+pyinstaller --noconfirm --onefile --windowed --icon "assets/icon.ico" --add-data "config;config" --add-data "assets;assets" main.py -n LookBusyAgent
 ```
 
-EXE 文件在 `dist/` 目录。
+生成的完整可携式单体 EXE 文件位于 `dist/` 目录。
 
 ## 安全声明
 

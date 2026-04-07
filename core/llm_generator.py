@@ -1,3 +1,4 @@
+from core.utils import get_config_path, get_resource_path
 """
 llm_generator.py  (v2)
 基于 LLM 生成与「我是谁 + 今天做什么」贴合的个性化内容。
@@ -44,7 +45,7 @@ _FALLBACK_SEARCH_QUERIES = [
 
 def _load_llm_config() -> dict:
     config_path = os.path.normpath(
-        os.path.join(os.path.dirname(__file__), '..', 'config', 'default_tasks.json'))
+        get_config_path())
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             return json.load(f).get('llm', {})
