@@ -318,6 +318,7 @@ class MainWindow:
         return lbl
 
     def _set_lang(self, new_lang):
+        old_lang = self.lang
         self.lang = new_lang
         self.config['language'] = new_lang
         _save_config_obj(self.config)
@@ -332,12 +333,14 @@ class MainWindow:
             self.status_var.set(self._t('status_ready'))
             
         # 更新 entry 的占位符
+        from ui.i18n import TR
         for entry, pkey in getattr(self, '_placeholders', []):
-            if entry.get() == '':
+            old_ph = TR.get(old_lang, {}).get(pkey, '')
+            current_val = entry.get()
+            if current_val == '' or current_val == old_ph:
+                entry.delete(0, 'end')
                 entry.insert(0, self._t(pkey))
                 entry.config(fg=C['subtext'])
-            elif entry.get() != self._t(pkey):
-                pass
                 
         # 更新颜色
         for btn, cur_lang in self._lang_btns:
