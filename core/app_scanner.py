@@ -79,25 +79,17 @@ def scan_available_apps():
     """
     known_apps = _load_known_apps()
     running_procs = _get_running_processes()
-    installed_names = _get_installed_via_registry()
 
     result = {}
     for app_name, info in known_apps.items():
         processes = info.get('processes', [])
-
-        # 检查是否正在运行
         is_running = any(p.lower() in running_procs for p in processes)
-
-        # 检查是否已安装（注册表名称匹配 或 进程在运行）
-        is_installed = is_running or any(
-            app_name.lower() in inst_name for inst_name in installed_names
-        )
 
         result[app_name] = {
             'icon': info.get('icon', '🖥️'),
             'processes': processes,
             'priority': info.get('priority', 1),
-            'available': is_installed,
+            'available': True,   # 所有已知软件均显示，由用户自行勾选决定是否启用
             'running': is_running,
         }
 
