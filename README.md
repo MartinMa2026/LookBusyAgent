@@ -82,7 +82,7 @@ class WhatsAppAdapter(BaseAdapter):
 
 编写完毕后，无需改动任何系统文件，你可以直接提 PR！或通过一行打包命令生成最终执行体：
 ```bash
-pyinstaller --noconfirm --onefile --windowed --icon "assets/icon.ico" --add-data "config;config" --add-data "assets;assets" --collect-submodules adapters main.py -n LookBusyAgent
+pyinstaller --noconfirm --onefile --windowed --icon "assets/icon.ico" --add-data "config;config" --add-data "assets;assets" --collect-submodules adapters --exclude-module numpy --exclude-module IPython --exclude-module cv2 --exclude-module PyQt5 --exclude-module pandas main.py -n LookBusyAgent
 ```
 
 **致敬每一个热爱生活的开发者！🍻**
