@@ -133,9 +133,7 @@ class WeChatAdapter(BaseAdapter):
         query = random.choice(['外卖', '快递', '聚餐', '晚上吃啥', '哈哈', '到了吗', '链接'])
         be.human_type(query)
         be.short_pause(1.5, 3.0)
-        pyautogui.press('escape')
-        time.sleep(0.3)
-        pyautogui.press('escape')
+        pyautogui.press('enter')
 
     def _action_scroll(self):
         win_x, win_y, win_w, win_h = self._get_window_rect()
