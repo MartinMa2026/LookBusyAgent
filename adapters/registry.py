@@ -17,7 +17,6 @@ import adapters.browser
 import adapters.excel
 import adapters.word
 
-import adapters.reader
 
 _ADAPTERS = {}
 _METAS = {}
