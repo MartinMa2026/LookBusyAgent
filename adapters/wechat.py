@@ -38,14 +38,18 @@ class WeChatAdapter(BaseAdapter):
                     try:
                         if getattr(win, 'isMinimized', False):
                             win.restore()
+                            time.sleep(0.2)
                         pyautogui.press('alt')
                         win.activate()
                     except Exception:
                         pass
                     
                     time.sleep(random.uniform(0.3, 0.6))
-                    self.current_window = win
-                    return True
+                    if getattr(win, 'isActive', False):
+                        self.current_window = win
+                        return True
+                    else:
+                        continue
         return False
 
     def _get_window_rect(self):

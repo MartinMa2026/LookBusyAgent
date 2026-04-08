@@ -50,15 +50,25 @@ class BrowserAdapter(BaseAdapter):
         return None
 
     def _activate_window(self) -> bool:
-        win = self._find_window()
-        if not win:
-            return False   # ✅ 直接跳过，不自动打开浏览器
-        try:
-            win.activate()
-            time.sleep(random.uniform(0.3, 0.6))
-            return True
-        except Exception:
-            return False
+        kws = self._window_kws.get(self.app_name, ["Chrome"])
+        for win in gw.getAllWindows():
+            if any(k.lower() in win.title.lower() for k in kws):
+                try:
+                    if getattr(win, 'isMinimized', False):
+                        win.restore()
+                        time.sleep(0.2)
+                    pyautogui.press('alt')
+                    win.activate()
+                except Exception:
+                    pass
+                
+                time.sleep(random.uniform(0.3, 0.6))
+                if getattr(win, 'isActive', False):
+                    self.current_window = win
+                    return True
+                else:
+                    continue
+        return False
 
     def _generate_behavior_chain(self) -> list:
         """生成一套具有连贯逻辑的上网行为链（剧本）"""

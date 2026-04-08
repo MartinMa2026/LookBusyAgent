@@ -44,20 +44,34 @@ class ExcelAdapter(BaseAdapter):
         return None
 
     def _activate_window(self) -> bool:
-        win = self._find_window()
-        if not win:
-            # ✅ 尝试创建临时文件，但不等待太久
-            self._create_temp_workbook()
-            time.sleep(2.5)
-            win = self._find_window()
-        if not win:
+        # 针对所有的潜在影子窗口进行逐个硬激活尝试
+        def attempt_activation():
+            for win in gw.getAllWindows():
+                t = win.title.lower()
+                if 'excel' in t or '.xlsx' in t or '.xls' in t or ('wps' in t and 'et' in t):
+                    try:
+                        if getattr(win, 'isMinimized', False):
+                            win.restore()
+                            time.sleep(0.2)
+                        pyautogui.press('alt')
+                        win.activate()
+                    except Exception:
+                        pass
+                    
+                    time.sleep(random.uniform(0.3, 0.6))
+                    if getattr(win, 'isActive', False):
+                        self.current_window = win
+                        return True
             return False
-        try:
-            win.activate()
-            time.sleep(random.uniform(0.3, 0.6))
+
+        if attempt_activation():
             return True
-        except Exception:
-            return False
+            
+        # ✅ 尝试创建临时文件，挂起寻找
+        self._create_temp_workbook()
+        time.sleep(2.5)
+        
+        return attempt_activation()
 
     def _create_temp_workbook(self):
         import tempfile
