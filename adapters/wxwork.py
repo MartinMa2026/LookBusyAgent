@@ -134,7 +134,10 @@ class WXWorkAdapter(BaseAdapter):
         query = random.choice(['需求文档', '发票', '报销', '会议纪要', '排期', '周报', 'OKR'])
         be.human_type(query)
         be.short_pause(1.5, 3.0)
-        pyautogui.press('enter')
+        # 终极安全措施：全选并删除，既能清空搜索栏恢复原状，又防防范了Ctrl+F失效而可能误发信息
+        pyautogui.hotkey('ctrl', 'a')
+        time.sleep(0.05)
+        pyautogui.press('delete')
 
     def _action_scroll(self):
         win_x, win_y, win_w, win_h = self._get_window_rect()
