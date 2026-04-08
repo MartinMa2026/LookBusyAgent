@@ -16,7 +16,7 @@ import adapters.wechat
 import adapters.browser
 import adapters.excel
 import adapters.word
-import adapters.coder
+
 import adapters.reader
 
 _ADAPTERS = {}
