@@ -45,8 +45,19 @@ class WXWorkAdapter(BaseAdapter):
                         pass
                     
                     time.sleep(random.uniform(0.3, 0.6))
+                    self.current_window = win
                     return True
         return False
+
+    def _get_window_rect(self):
+        try:
+            if getattr(self, 'current_window', None):
+                win = self.current_window
+                return win.left, win.top, win.width, win.height
+        except Exception:
+            pass
+        w, h = pyautogui.size()
+        return 0, 0, w, h
 
     def _generate_behavior_chain(self) -> list:
         """企业微信需要体现强工作流，搜报表，看组织架构，查工作台"""
@@ -90,9 +101,9 @@ class WXWorkAdapter(BaseAdapter):
         be.short_pause(0.3, 1.0)
 
     def _action_fake_type_burst(self):
-        screen_w, screen_h = pyautogui.size()
-        input_x = random.randint(int(screen_w * 0.4), int(screen_w * 0.75))
-        input_y = random.randint(int(screen_h * 0.85), int(screen_h * 0.93))
+        win_x, win_y, win_w, win_h = self._get_window_rect()
+        input_x = random.randint(int(win_x + win_w * 0.4), int(win_x + win_w * 0.75))
+        input_y = random.randint(int(win_y + win_h * 0.85), int(win_y + win_h * 0.93))
         be.human_click(input_x, input_y)
         be.short_pause(0.2, 0.4)
 
@@ -104,9 +115,9 @@ class WXWorkAdapter(BaseAdapter):
         pyautogui.press('delete')
 
     def _action_fake_type(self):
-        screen_w, screen_h = pyautogui.size()
-        input_x = random.randint(int(screen_w * 0.4), int(screen_w * 0.75))
-        input_y = random.randint(int(screen_h * 0.85), int(screen_h * 0.93))
+        win_x, win_y, win_w, win_h = self._get_window_rect()
+        input_x = random.randint(int(win_x + win_w * 0.4), int(win_x + win_w * 0.75))
+        input_y = random.randint(int(win_y + win_h * 0.85), int(win_y + win_h * 0.93))
         be.human_click(input_x, input_y)
         be.short_pause(0.2, 0.5)
         text = self._get_reply()
@@ -128,18 +139,18 @@ class WXWorkAdapter(BaseAdapter):
         pyautogui.press('escape')
 
     def _action_scroll(self):
-        screen_w, screen_h = pyautogui.size()
-        x = random.randint(int(screen_w * 0.35), int(screen_w * 0.85))
-        y = random.randint(int(screen_h * 0.3), int(screen_h * 0.7))
+        win_x, win_y, win_w, win_h = self._get_window_rect()
+        x = random.randint(int(win_x + win_w * 0.35), int(win_x + win_w * 0.85))
+        y = random.randint(int(win_y + win_h * 0.3), int(win_y + win_h * 0.7))
         be.human_move(x, y)
         be.short_pause(0.1, 0.3)
         be.human_scroll(clicks=random.randint(3, 10), direction=random.choice(['up', 'down', 'down']))
 
     def _action_switch_chat(self):
-        screen_w, screen_h = pyautogui.size()
-        chat_x = random.randint(int(screen_w * 0.1), int(screen_w * 0.25))
+        win_x, win_y, win_w, win_h = self._get_window_rect()
+        chat_x = random.randint(int(win_x + win_w * 0.1), int(win_x + win_w * 0.25))
         for _ in range(random.randint(3, 8)):
-            chat_y = random.randint(int(screen_h * 0.15), int(screen_h * 0.85))
+            chat_y = random.randint(int(win_y + win_h * 0.15), int(win_y + win_h * 0.85))
             be.human_click(chat_x, chat_y)
             be.short_pause(0.1, 0.4)
             if random.random() < 0.3:
@@ -147,25 +158,28 @@ class WXWorkAdapter(BaseAdapter):
 
     def _action_check_workbench(self):
         """假装点开左侧下方的“工作台”图标，寻找OA应用"""
-        screen_w, screen_h = pyautogui.size()
+        win_x, win_y, win_w, win_h = self._get_window_rect()
         # 点击左下角区域
-        be.human_click(random.randint(20, 60), random.randint(int(screen_h * 0.7), int(screen_h * 0.9)))
+        be.human_click(int(win_x) + random.randint(20, 60), random.randint(int(win_y + win_h * 0.7), int(win_y + win_h * 0.9)))
         be.short_pause(1.0, 2.0)
         # 浏览工作台
-        be.human_move(random.randint(int(screen_w * 0.4), int(screen_w * 0.7)), random.randint(int(screen_h * 0.4), int(screen_h * 0.6)))
+        be.human_move(
+            random.randint(int(win_x + win_w * 0.4), int(win_x + win_w * 0.7)), 
+            random.randint(int(win_y + win_h * 0.4), int(win_y + win_h * 0.6))
+        )
         for _ in range(random.randint(1, 3)):
             be.human_scroll(clicks=random.randint(3, 8), direction='down')
             be.short_pause(0.5, 1.5)
 
     def _action_check_org_chart(self):
         """假装在左侧边栏寻找组织架构/通讯录的人"""
-        screen_w, screen_h = pyautogui.size()
+        win_x, win_y, win_w, win_h = self._get_window_rect()
         # 点击左侧中间的通讯录图标
-        be.human_click(random.randint(20, 60), random.randint(int(screen_h * 0.4), int(screen_h * 0.6)))
+        be.human_click(int(win_x) + random.randint(20, 60), random.randint(int(win_y + win_h * 0.4), int(win_y + win_h * 0.6)))
         be.short_pause(1.0, 2.0)
         # 在多级列表中寻找
-        org_x = random.randint(int(screen_w * 0.1), int(screen_w * 0.25))
+        org_x = random.randint(int(win_x + win_w * 0.1), int(win_x + win_w * 0.25))
         for _ in range(random.randint(3, 5)):
-            org_y = random.randint(int(screen_h * 0.3), int(screen_h * 0.8))
+            org_y = random.randint(int(win_y + win_h * 0.3), int(win_y + win_h * 0.8))
             be.human_click(org_x, org_y)
             be.short_pause(0.5, 1.0)
