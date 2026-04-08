@@ -13,6 +13,7 @@ from adapters.base_adapter import BaseAdapter
 # 强制 Pyinstaller 收集所有的内置适配器（也可以在打包时用 --collect-submodules adapters）
 # 防止打包后反射不到这些内建组件
 import adapters.wechat
+import adapters.wxwork
 import adapters.browser
 import adapters.excel
 import adapters.word
