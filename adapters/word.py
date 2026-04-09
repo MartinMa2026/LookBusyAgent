@@ -29,8 +29,8 @@ _PARAGRAPH_TEMPLATES = [
 
 class WordAdapter(BaseAdapter):
     META = {
-        "names": ["Word", "WPS"],
-        "processes": ["WINWORD.EXE", "wps.exe"],
+        "names": ["Word"],
+        "processes": ["WINWORD.EXE"],
         "icon": "📝",
         "priority": 1
     }
@@ -40,12 +40,8 @@ class WordAdapter(BaseAdapter):
         def attempt_activation():
             for win in gw.getAllWindows():
                 t = win.title.lower()
-                if self.app_name.upper() == "WPS" or "wps" in self.app_name.lower():
-                    if 'wps' not in t:
-                        continue
-                else:
-                    if not (('word' in t or '.docx' in t or '.doc' in t) and 'wps' not in t):
-                        continue
+                if not (('word' in t or '.docx' in t or '.doc' in t) and 'wps' not in t):
+                    continue
                         
                 try:
                     if getattr(win, 'isMinimized', False):

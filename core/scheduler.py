@@ -51,7 +51,7 @@ class Scheduler:
     # ── 适配器加载 ──────────────────────────────────────────
 
     def _load_adapters(self):
-        from adapters.registry import get_adapter_class
+        from adapters.registry_v2 import get_adapter_class
 
         self._adapters = {}
         for app in self.app_weights:

@@ -39,7 +39,7 @@ class BaseAdapter(ABC):
         return words if words else ["工作", "报告", "数据", "分析"]
 
     def _get_reply(self) -> str:
-        """获取 LLM 生成的即时回复（微信场景）"""
+        """获取 LLM 生成的即时回复（聊天场景）"""
         if self.llm:
             return self.llm.get_reply()
         import random

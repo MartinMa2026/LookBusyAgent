@@ -19,7 +19,7 @@ except ImportError:
 
 def _load_known_apps():
     """从适配器注册中心获取动态加载的软体元数据聚合"""
-    from adapters.registry import get_all_app_metas
+    from adapters.registry_v2 import get_all_app_metas
     return get_all_app_metas()
 
 

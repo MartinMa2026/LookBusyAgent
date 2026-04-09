@@ -98,7 +98,7 @@ def anti_sleep_jitter():
 
 
 def dismiss_notification_popup():
-    """模拟关闭系统右下角的弹窗通知（如微信、邮件提醒）"""
+    """模拟关闭系统右下角的弹窗通知（如 IM、邮件提醒）"""
     _check_stop()
     screen_width, screen_height = pyautogui.size()
     # 移动到右下角通知区域的关闭按钮大致位置 (向左大约 10-40 像素，向上大约 30-80 像素)
