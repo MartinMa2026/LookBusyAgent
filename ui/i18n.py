@@ -62,6 +62,7 @@ TR = {
         "lbl_allocated": "Allocated:",
         "lbl_click_eq": "  [ Click 'Equalize' → ]",
         "btn_eq": "Equalize",
+        "lbl_app_hint": "Please open the software you want to use and maximize it fullscreen.",
         "sec_panic": "◆ Boss Key",
         "lbl_combo": "COMBO:",
         "btn_save": "[ SAVE ]",

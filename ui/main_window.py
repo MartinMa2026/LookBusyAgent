@@ -311,7 +311,15 @@ class MainWindow:
 
     def _t(self, key):
         return TR.get(self.lang, TR['ZH']).get(key, key)
-        
+
+    def _app_hint_text(self):
+        hints = {
+            'ZH': '请打开你摸鱼要用的软件、并全屏最大化。',
+            'EN': 'Please open the software you want to use and maximize it fullscreen.',
+            'JA': '摸魚に使うソフトを開き、全画面で最大化してください。',
+        }
+        return hints.get(self.lang, hints['ZH'])
+
     def _add_lbl(self, parent, key, **kwargs):
         lbl = tk.Label(parent, text=self._t(key), **kwargs)
         self._updaters.append(lambda: lbl.config(text=self._t(key)))
@@ -461,6 +469,14 @@ class MainWindow:
         # ── 软件权重分配 ─────────────────────────────────────
         self._section_label(root, 'sec_workload', C['amber'])
 
+        app_hint = tk.Label(
+            root, text=self._app_hint_text(),
+            font=FONT_TINY, bg=C['bg'], fg=C['amber'],
+            justify='left', anchor='w'
+        )
+        app_hint.pack(fill='x', padx=14, pady=(0, 4))
+        self._updaters.append(lambda: app_hint.config(text=self._app_hint_text()))
+
         n_apps = len(self.available_apps)
         apps_h = max(80, n_apps * 28 + 44)
         apps_rf = make_rounded_frame(root, w=W - 24, h=apps_h, border_color=C['border2'], accent=C['amber'])
@@ -485,6 +501,7 @@ class MainWindow:
         for app_name, info in self.available_apps.items():
             wr = WeightRow(apps_inner, app_name, info['icon'], info['available'], self._on_weight_change)
             self._weight_rows.append(wr)
+
 
         # ── 老板键 ────────────────────────────────────────────
         self._section_label(root, 'sec_panic', C['red'])
