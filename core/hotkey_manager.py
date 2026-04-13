@@ -17,7 +17,7 @@ class HotkeyManager:
     3. 回调 on_boss_arrives（由主程序实现：恢复 UI、更新状态）
     """
 
-    def __init__(self, combo: str = "ctrl+shift+q"):
+    def __init__(self, combo: str = "f12"):
         self.combo = combo
         self.stop_event = threading.Event()
         self._on_boss_callback = None

@@ -41,7 +41,9 @@ TR = {
         "t_ok": "✓ 已连接",
         "t_err_key": "✗ Key错误",
         "t_err_limit": "✗ 超限额",
-        "t_err_net": "✗ 网络错误"
+        "t_err_net": "✗ 网络错误",
+        "lbl_stats_today": "今日带薪摸鱼",
+        "lbl_stats_total": "总计赚回青春"
     },
     "EN": {
         "title": "LOOK-BUSY AGENT  //  v2.0",
@@ -80,7 +82,9 @@ TR = {
         "t_ok": "✓ Connected",
         "t_err_key": "✗ Bad Key",
         "t_err_limit": "✗ Limit Exceeded",
-        "t_err_net": "✗ Network Error"
+        "t_err_net": "✗ Network Error",
+        "lbl_stats_today": "Today's Fishing",
+        "lbl_stats_total": "Total Recovered"
     },
     "JA": {
         "title": "LOOK-BUSY AGENT  //  v2.0",
@@ -118,6 +122,8 @@ TR = {
         "t_ok": "✓ 接続済",
         "t_err_key": "✗ Keyエラー",
         "t_err_limit": "✗ 制限超過",
-        "t_err_net": "✗ ネットワークエラー"
+        "t_err_net": "✗ ネットワークエラー",
+        "lbl_stats_today": "今日のサボり時間",
+        "lbl_stats_total": "累計取り戻した青春"
     }
 }

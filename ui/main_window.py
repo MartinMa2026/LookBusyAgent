@@ -8,6 +8,8 @@ aesthetic: 「黑市操盘手」terminal-hacker
 import json
 import math
 import os
+import time
+import datetime
 import tkinter as tk
 from tkinter import messagebox
 
@@ -55,11 +57,6 @@ def _save_config_obj(data):
         get_config_path())
     with open(config_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
-def _save_boss_key(combo: str):
-    data = _load_config()
-    data['boss_key'] = combo
-    _save_config_obj(data)
 
 
 # ── Canvas 工厂函数 ─────────────────────────────────────────
@@ -271,6 +268,15 @@ class MainWindow:
     def __init__(self):
         self.config        = _load_config()
         self.lang          = self.config.get('language', 'ZH')
+        
+        today_str = datetime.date.today().isoformat()
+        self.stats = self.config.get('stats', {'date': today_str, 'today': 0, 'total': 0})
+        if self.stats.get('date') != today_str:
+            self.stats['date'] = today_str
+            self.stats['today'] = 0
+            self.config['stats'] = self.stats
+            _save_config_obj(self.config)
+
         self._updaters     = []
         
         self.root = tk.Tk()
@@ -297,7 +303,7 @@ class MainWindow:
         except Exception as e:
             print("Failed to set icon:", e)
 
-        self.hotkey_manager = HotkeyManager(self.config.get('boss_key', 'ctrl+shift+q'))
+        self.hotkey_manager = HotkeyManager('f12')
         self.scheduler     = None
         self._running      = False
 
@@ -512,17 +518,9 @@ class MainWindow:
         boss_row.pack(anchor='w', pady=4)
 
         self._add_lbl(boss_row, 'lbl_combo', font=FONT_TINY, bg=C['panel'], fg=C['subtext']).pack(side='left')
-        self.boss_key_var = tk.StringVar(value=self.config.get('boss_key', 'ctrl+shift+q'))
-        tk.Entry(boss_row, textvariable=self.boss_key_var,
+        tk.Label(boss_row, text='F12',
                  font=('Courier New', 9, 'bold'),
-                 bg=C['entry_bg'], fg=C['red'],
-                 insertbackground=C['red'], relief='flat', bd=0, width=18).pack(side='left', padx=(4, 8))
-
-        save_btn = self._add_lbl(boss_row, 'btn_save', font=FONT_TINY, bg=C['panel'], fg=C['red'], cursor='hand2')
-        save_btn.pack(side='left')
-        save_btn.bind('<Button-1>', lambda _: self._save_boss_key())
-        save_btn.bind('<Enter>', lambda _: save_btn.config(fg=C['white']))
-        save_btn.bind('<Leave>', lambda _: save_btn.config(fg=C['red']))
+                 bg=C['panel'], fg=C['red']).pack(side='left', padx=(4, 8))
         self._add_lbl(boss_row, 'lbl_resume_tip', font=FONT_TINY, bg=C['panel'], fg=C['subtext']).pack(side='left')
 
         # ── 状态 + 主按钮 ─────────────────────────────────────
@@ -536,6 +534,21 @@ class MainWindow:
 
         self.status_var = tk.StringVar(value=self._t('status_ready'))
         tk.Label(status_frame, textvariable=self.status_var, font=FONT_TINY, bg=C['bg'], fg=C['subtext']).pack(side='left', padx=6)
+
+        # ── 摸鱼计时器 ──────────────────────────────────────────
+        stats_frame = tk.Frame(root, bg=C['bg'])
+        stats_frame.pack(fill='x', padx=14, pady=(2, 8))
+        
+        self.today_var = tk.StringVar(value="00:00:00")
+        self.total_var = tk.StringVar(value="00:00:00")
+        
+        t_lbl = self._add_lbl(stats_frame, 'lbl_stats_today', font=FONT_TINY, bg=C['bg'], fg=C['subtext'])
+        t_lbl.pack(side='left')
+        tk.Label(stats_frame, textvariable=self.today_var, font=('Courier New', 11, 'bold'), bg=C['bg'], fg=C['green']).pack(side='left', padx=(4, 16))
+        
+        tot_lbl = self._add_lbl(stats_frame, 'lbl_stats_total', font=FONT_TINY, bg=C['bg'], fg=C['subtext'])
+        tot_lbl.pack(side='left')
+        tk.Label(stats_frame, textvariable=self.total_var, font=('Courier New', 11, 'bold'), bg=C['bg'], fg=C['amber']).pack(side='left', padx=(4, 0))
 
         self.start_btn = make_neon_button(
             root, t_func=lambda: self._t('btn_start'),
@@ -635,13 +648,6 @@ class MainWindow:
         self.root.after(80, self._animate_status_dot)
 
     # ── 控制逻辑 ─────────────────────────────────────────────
-
-    def _save_boss_key(self):
-        combo = self.boss_key_var.get().strip()
-        if not combo:
-            return
-        _save_boss_key(combo)
-        self.hotkey_manager.set_combo(combo)
 
     def _setup_hotkey(self):
         self.hotkey_manager.on_boss_arrives(self._on_boss_arrives)
@@ -789,12 +795,36 @@ class MainWindow:
         except Exception:
             pass
 
+    def _refresh_stats_ui(self):
+        def fmt(secs):
+            return f"{int(secs)//3600:02d}:{(int(secs)%3600)//60:02d}:{int(secs)%60:02d}"
+        self.today_var.set(fmt(self.stats['today']))
+        self.total_var.set(fmt(self.stats['total']))
+
+    def _tick_timer(self):
+        if self._running and not getattr(self.hotkey_manager, '_paused', False):
+            self.stats['today'] += 1
+            self.stats['total'] += 1
+            self._refresh_stats_ui()
+            
+            now = time.time()
+            if now - self._last_save_time > 60:
+                self.config['stats'] = self.stats
+                _save_config_obj(self.config)
+                self._last_save_time = now
+        self.root.after(1000, self._tick_timer)
+
     def run(self):
+        self._last_save_time = time.time()
+        self._refresh_stats_ui()
+        self._tick_timer()
         self.root.protocol('WM_DELETE_WINDOW', self._on_close)
         self.root.mainloop()
 
     def _on_close(self):
         try:
+            self.config['stats'] = self.stats
+            _save_config_obj(self.config)
             self._stop_simulation()
             self.hotkey_manager.stop()
         except Exception:
