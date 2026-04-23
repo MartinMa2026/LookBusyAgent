@@ -57,6 +57,18 @@ def _resolve_base_url(config: dict) -> str:
     return (config.get('base_url') or 'https://api.openai.com').rstrip('/')
 
 
+def _build_chat_completions_url(config: dict) -> str:
+    """
+    Accept a plain API host, a /v1 base URL, or a fully specified endpoint.
+    """
+    base_url = _resolve_base_url(config)
+    if base_url.endswith('/chat/completions'):
+        return base_url
+    if base_url.endswith('/v1'):
+        return f"{base_url}/chat/completions"
+    return f"{base_url}/v1/chat/completions"
+
+
 class LLMGenerator:
     """
     LLM 内容生成器（v2）
@@ -96,11 +108,10 @@ class LLMGenerator:
     def _call_llm(self, prompt: str, max_tokens: int = 800) -> Optional[str]:
         try:
             import urllib.request
-            base_url = _resolve_base_url(self.config)
             api_key  = self.config.get('api_key', '')
             model    = self.config.get('model', 'gpt-4o-mini')
 
-            url = f"{base_url}/v1/chat/completions"
+            url = _build_chat_completions_url(self.config)
             payload = json.dumps({
                 "model": model,
                 "messages": [{"role": "user", "content": prompt}],

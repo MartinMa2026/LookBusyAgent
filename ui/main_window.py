@@ -17,7 +17,7 @@ from core.app_scanner import scan_available_apps
 from core.hotkey_manager import HotkeyManager
 from core.scheduler import Scheduler
 from ui.i18n import TR, SLACKER_ICON_B64
-from core.llm_generator import _resolve_base_url
+from core.llm_generator import _build_chat_completions_url
 
 # ── 调色板 ──────────────────────────────────────────────────
 C = {
@@ -755,8 +755,7 @@ class MainWindow:
         def _do_test():
             try:
                 cfg = _load_config().get('llm', {})
-                base_url = _resolve_base_url(cfg)
-                url = f"{base_url}/v1/chat/completions"
+                url = _build_chat_completions_url(cfg)
                 payload = json.dumps({
                     "model": model,
                     "messages": [{"role": "user", "content": "hello"}],
