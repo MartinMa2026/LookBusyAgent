@@ -3,4 +3,4 @@ keyboard==0.13.5
 pygetwindow==0.0.9
 psutil==5.9.8
 pyperclip==1.8.2
-Pillow==10.3.0
+Pillow>=11,<13

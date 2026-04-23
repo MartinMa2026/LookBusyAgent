@@ -1,9 +1,9 @@
 {
   "llm": {
-    "api_key": "sk-cp-s4xXxGy0j94FF5wXFzdteKiCvCdCV2btf2oCUdU09a3zT1DupZFHvZE-MH-ZUREJVcLbgIg1vgKzKWtRwfToVk9MsBM_d9kAbNSJLWAkt94L8DC8ICutFRQ",
-    "base_url": "https://api.minimaxi.com/",
-    "model": "MiniMax-M2.5-lightning",
-    "_comment": "留空则使用内建模板。Ollama 示例：base_url=http://localhost:11434, model=qwen2.5, api_key=ollama"
+    "api_key": "",
+    "base_url": "",
+    "model": "gpt-4o-mini",
+    "_comment": "api_key 留空则使用内建模板。base_url 留空时默认使用 https://api.openai.com 。Ollama 示例：base_url=http://localhost:11434, model=qwen2.5, api_key=ollama"
   },
   "boss_key": "ctrl+shift+q",
   "session_duration_minutes": 480,
