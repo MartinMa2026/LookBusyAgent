@@ -28,9 +28,11 @@ Git地址：[github.com/MartinMa2026/LookBusyAgent](https://github.com/MartinMa2
 ## 🏄‍♂️ 怎么开启？
 
 ### 步骤 1：领装备
-不想折腾环境的话，直接去 [GitHub Releases](https://github.com/MartinMa2026/LookBusyAgent/releases) 下载 `LookBusyAgent.exe` 或 `LookBusyAgent-windows-x64.zip` 就行。
-当然，喜欢看源码的大佬可以这样跑：
 
+** 不想折腾环境的话，直接去 [GitHub Releases](https://github.com/MartinMa2026/LookBusyAgent/releases) 下载 `LookBusyAgent.exe` 或 `LookBusyAgent-windows-x64.zip` 就行。
+
+
+当然，喜欢看源码的大佬可以这样跑：
 注意：下面命令请在 **Windows 原生 PowerShell / CMD** 里执行，不要在 WSL / Linux / macOS 里直接跑。
 
 ```bash
