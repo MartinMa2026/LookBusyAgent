@@ -53,6 +53,10 @@ def _load_llm_config() -> dict:
         return {}
 
 
+def _resolve_base_url(config: dict) -> str:
+    return (config.get('base_url') or 'https://api.openai.com').rstrip('/')
+
+
 class LLMGenerator:
     """
     LLM 内容生成器（v2）
@@ -92,7 +96,7 @@ class LLMGenerator:
     def _call_llm(self, prompt: str, max_tokens: int = 800) -> Optional[str]:
         try:
             import urllib.request
-            base_url = self.config.get('base_url', 'https://api.openai.com').rstrip('/')
+            base_url = _resolve_base_url(self.config)
             api_key  = self.config.get('api_key', '')
             model    = self.config.get('model', 'gpt-4o-mini')
 

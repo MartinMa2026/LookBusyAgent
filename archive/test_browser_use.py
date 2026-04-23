@@ -1,4 +1,5 @@
 import asyncio
+import os
 from browser_use import Agent, Browser, ChatOpenAI
 import re
 
@@ -29,10 +30,14 @@ class NoThinkChatOpenAI(ChatOpenAI):
         return result
 
 async def main():
+    api_key = os.getenv("LOOKBUSY_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("请先设置环境变量 LOOKBUSY_API_KEY，再运行这个测试脚本。")
+
     # 使用注入了拦截器的自定义类，而非原始类
     llm = NoThinkChatOpenAI(
         model="MiniMax-M2.5-lightning",
-        api_key="sk-cp-s4xXxGy0j94FF5wXFzdteKiCvCdCV2btf2oCUdU09a3zT1DupZFHvZE-MH-ZUREJVcLbgIg1vgKzKWtRwfToVk9MsBM_d9kAbNSJLWAkt94L8DC8ICutFRQ",
+        api_key=api_key,
         base_url="https://api.minimaxi.com/v1",
     )
     
