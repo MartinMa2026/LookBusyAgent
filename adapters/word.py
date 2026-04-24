@@ -7,8 +7,11 @@ word.py - Word / WPS 适配器（热火朝天版）
 - 停顿大幅缩短，节奏更快
 """
 
+import os
 import random
+import subprocess
 import time
+from pathlib import Path
 import pyautogui
 import pygetwindow as gw
 
@@ -16,15 +19,23 @@ from adapters.base_adapter import BaseAdapter
 from core import behavior_engine as be
 
 
-_PARAGRAPH_TEMPLATES = [
-    "根据本季度{kw}分析，整体呈现稳步增长态势，",
-    "针对{kw}工作，我们制定了以下改进方案，",
-    "综合以上数据，{kw}目标完成情况如下，",
-    "就{kw}问题，经过深入研究和讨论，建议如下，",
-    "本报告主要就{kw}方面进行系统性总结，",
-    "从数据来看，{kw}环比增长明显，原因分析如下，",
-    "针对{kw}提出以下三点优化建议，",
-]
+_PARAGRAPH_TEMPLATES = {
+    "ZH": [
+        "根据当前{kw}分析，整体进展保持稳定，后续重点如下。",
+        "围绕{kw}工作，现阶段整理出以下推进思路。",
+        "结合现有信息，{kw}相关结论和建议如下。",
+    ],
+    "EN": [
+        "Based on the current {kw} review, overall progress remains stable and the next focus areas are listed below.",
+        "For the ongoing {kw} work, the current draft can be organized around the following actions.",
+        "Taking the available information into account, the key findings and recommendations for {kw} are as follows.",
+    ],
+    "JA": [
+        "現時点の{kw}整理を踏まえると、全体の進捗は安定しており今後の重点は以下の通りです。",
+        "{kw}対応については、現段階では次の進め方で整理するのが適切です。",
+        "現状の情報をもとに、{kw}に関する要点と対応方針を以下にまとめます。",
+    ],
+}
 
 
 class WordAdapter(BaseAdapter):
@@ -35,12 +46,17 @@ class WordAdapter(BaseAdapter):
         "priority": 1
     }
 
+    def _is_word_window(self, title: str) -> bool:
+        t = title.lower()
+        return ('wps' not in t) and (
+            'word' in t or '.docx' in t or '.doc' in t or 'winword' in t
+        )
+
 
     def _activate_window(self) -> bool:
         def attempt_activation():
             for win in gw.getAllWindows():
-                t = win.title.lower()
-                if not (('word' in t or '.docx' in t or '.doc' in t) and 'wps' not in t):
+                if not self._is_word_window(win.title):
                     continue
                         
                 try:
@@ -62,36 +78,62 @@ class WordAdapter(BaseAdapter):
             return True
             
         # 尝试创建临时文档，挂起寻找
-        self._create_temp_doc()
+        self._launch_blank_document()
         time.sleep(2.5)
         
         return attempt_activation()
 
-    def _create_temp_doc(self):
-        import tempfile
-        import os
-        tmp = tempfile.NamedTemporaryFile(suffix='.docx', delete=False,
-                                          prefix='look_busy_', dir=tempfile.gettempdir())
-        tmp.close()
-        os.startfile(tmp.name)
+    def _get_word_executable(self):
+        candidates = [
+            r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE",
+            r"C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE",
+            r"C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",
+            r"C:\Program Files (x86)\Microsoft Office\Office16\WINWORD.EXE",
+            r"C:\Program Files\Microsoft Office\root\Office15\WINWORD.EXE",
+            r"C:\Program Files (x86)\Microsoft Office\root\Office15\WINWORD.EXE",
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+
+        office_roots = [
+            Path(r"C:\Program Files\Microsoft Office"),
+            Path(r"C:\Program Files (x86)\Microsoft Office"),
+        ]
+        for root in office_roots:
+            if not root.exists():
+                continue
+            matches = list(root.rglob("WINWORD.EXE"))
+            if matches:
+                return str(matches[0])
+        return None
+
+    def _launch_blank_document(self):
+        exe = self._get_word_executable()
+        try:
+            if exe:
+                subprocess.Popen([exe, "/q"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                subprocess.Popen(["winword"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+        except Exception as e:
+            print(f"[Word] launch failed: {e}")
+            return False
 
     def _get_template_text(self):
         kws = self._get_task_keywords()
-        kw = random.choice(kws) if kws else '工作'
-        tmpl = random.choice(_PARAGRAPH_TEMPLATES)
+        defaults = {"ZH": "工作", "EN": "work", "JA": "作業"}
+        kw = random.choice(kws) if kws else defaults.get(self.language, defaults["ZH"])
+        tmpl = random.choice(_PARAGRAPH_TEMPLATES.get(self.language, _PARAGRAPH_TEMPLATES["ZH"]))
         return tmpl.format(kw=kw)
 
     def _generate_behavior_chain(self) -> list:
         """生成一套不仅查阅还会当面大段敲字的动作链（绝对不触发 Ctrl+S）"""
         chains = [
-            # 剧本1: 沉浸式创作 - 敲一段开头 -> 上下翻阅思考 -> 爆裂连续文字输出
-            ['type_paragraph', 'scroll', 'continuous_write', 'search_document'],
-            # 剧本2: 边搜边写 - Ctrl+F搜索 -> 滑动比对 -> 敲一行字
-            ['search_document', 'scroll', 'type_paragraph'],
-            # 剧本3: 完美主义 - 爆裂输出 -> 选取高亮检查 -> 接着输出
-            ['continuous_write', 'select_text', 'type_paragraph'],
-            # 剧本4: 行云流水打字 - 纯纯的键盘生产力
-            ['type_paragraph', 'continuous_write']
+            ['type_paragraph', 'scroll', 'continuous_write', 'mouse_review'],
+            ['continuous_write', 'scroll', 'type_paragraph'],
+            ['mouse_review', 'type_paragraph', 'continuous_write'],
+            ['type_paragraph', 'continuous_write', 'mouse_review'],
         ]
         return random.choice(chains)
 
@@ -105,16 +147,14 @@ class WordAdapter(BaseAdapter):
         action = self.action_queue.pop(0)
 
         try:
-            if action == 'search_document':
-                self._action_search_document()
-            elif action == 'continuous_write':
+            if action == 'continuous_write':
                 self._action_continuous_write()
             elif action == 'type_paragraph':
                 self._action_type_paragraph()
             elif action == 'scroll':
                 self._action_scroll()
-            elif action == 'select_text':
-                self._action_select_text()
+            elif action == 'mouse_review':
+                self._action_mouse_review()
             elif action == 'stay_and_think':
                 self._action_stay_and_think()
             else:
@@ -126,30 +166,23 @@ class WordAdapter(BaseAdapter):
 
         be.short_pause(0.3, 1.0)
 
-    def _action_search_document(self):
-        """假装按 Ctrl+F 搜索某个关键词，没有任何物理修改破坏"""
-        pyautogui.hotkey('ctrl', 'f')
-        time.sleep(random.uniform(0.3, 0.6))
-        # 随机抽取本工作域内的词或随意打几个词
-        keywords = self._get_task_keywords()
-        query = random.choice(keywords) if keywords else random.choice(['报告', '总结', '数据', '分析'])
-        be.human_type(query)
-        be.short_pause(1.5, 3.0)
-        pyautogui.press('escape')  # 退出搜索框
-
     def _action_stay_and_think(self):
         """发呆思考"""
         time.sleep(random.uniform(1.5, 3.5))
 
-    def _action_select_text(self):
-        """安全动作：按住 Shift 和方向键假装在高亮划选重点段落"""
-        pyautogui.keyDown('shift')
-        for _ in range(random.randint(4, 15)):
-            pyautogui.press(random.choice(['down', 'right', 'right']))
-            time.sleep(random.uniform(0.05, 0.15))
-        pyautogui.keyUp('shift')
-        time.sleep(random.uniform(1.0, 2.5))
-        pyautogui.press('left')  # 取消选区
+    def _action_mouse_review(self):
+        """用鼠标审阅文档，减少快捷键干扰"""
+        screen_w, screen_h = pyautogui.size()
+        for _ in range(random.randint(2, 4)):
+            be.human_move(
+                random.randint(int(screen_w * 0.35), int(screen_w * 0.8)),
+                random.randint(int(screen_h * 0.25), int(screen_h * 0.75)),
+                duration=random.uniform(0.2, 0.6),
+            )
+            be.short_pause(0.2, 0.6)
+        if random.random() < 0.5:
+            be.human_click()
+            be.short_pause(0.2, 0.5)
 
     def _action_continuous_write(self):
         """连续写入文字（绝不执行保存指令）"""
@@ -205,9 +238,7 @@ class WordAdapter(BaseAdapter):
         be.short_pause(0.3, 1.0)
 
     def _action_navigate(self):
-        key = random.choice(['pagedown', 'pageup', 'ctrl+end', 'ctrl+home'])
-        if '+' in key:
-            pyautogui.hotkey(*key.split('+'))
-        else:
-            pyautogui.press(key)
-        be.short_pause(0.5, 1.5)
+        for _ in range(random.randint(2, 5)):
+            pyautogui.press(random.choice(['up', 'down', 'down', 'pageup', 'pagedown']))
+            time.sleep(random.uniform(0.08, 0.2))
+        be.short_pause(0.5, 1.0)

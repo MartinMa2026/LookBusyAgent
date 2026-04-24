@@ -279,6 +279,7 @@ class MainWindow:
             _save_config_obj(self.config)
 
         self._updaters     = []
+        self._config_sync_job = None
         
         self.root = tk.Tk()
         self.root.title(self._t('title'))
@@ -314,6 +315,7 @@ class MainWindow:
         self._build_ui()
         self._setup_hotkey()
         self._init_weights()
+        self._bind_config_autosave()
         self._animate_status_dot()
 
     def _t(self, key):
@@ -337,6 +339,8 @@ class MainWindow:
         self.lang = new_lang
         self.config['language'] = new_lang
         _save_config_obj(self.config)
+        if getattr(self, 'scheduler', None):
+            self.scheduler.set_language(new_lang)
         self.root.title(self._t('title'))
         # 刷新所有绑定
         for fn in self._updaters:
@@ -688,6 +692,7 @@ class MainWindow:
             app_weights=weights,
             task_description=full_desc,
             identity=identity,
+            language=self.lang,
             stop_event=self.hotkey_manager.get_stop_event()
         )
         self.scheduler.start()
@@ -728,10 +733,32 @@ class MainWindow:
             url = ''
             
         data.setdefault('llm', {})
-        data['llm']['api_key']  = self.llm_key_var.get().strip()
+        self.config.setdefault('llm', {})
+        api_key = self.llm_key_var.get().strip()
+        model = self.llm_model_var.get().strip() or 'gpt-4o-mini'
+        data['llm']['api_key']  = api_key
         data['llm']['base_url'] = url
-        data['llm']['model']    = self.llm_model_var.get().strip() or 'gpt-4o-mini'
+        data['llm']['model']    = model
+        self.config['llm']['api_key'] = api_key
+        self.config['llm']['base_url'] = url
+        self.config['llm']['model'] = model
         _save_config_obj(data)
+
+    def _schedule_config_sync(self, *_):
+        if self._config_sync_job is not None:
+            self.root.after_cancel(self._config_sync_job)
+        self._config_sync_job = self.root.after(300, self._flush_config_sync)
+
+    def _flush_config_sync(self):
+        self._config_sync_job = None
+        try:
+            self._sync_llm_config()
+        except Exception:
+            pass
+
+    def _bind_config_autosave(self):
+        for var in (self.llm_key_var, self.llm_url_var, self.llm_model_var):
+            var.trace_add('write', self._schedule_config_sync)
 
     def _test_llm_connection(self):
         import threading, urllib.request, urllib.error
@@ -791,7 +818,7 @@ class MainWindow:
             from core.llm_generator import LLMGenerator
             task_desc = self.task_entry.get().strip() or "处理工作文档"
             identity = self.identity_entry.get().strip() or "普通员工"
-            LLMGenerator(identity=identity, task_description=task_desc)
+            LLMGenerator(identity=identity, task_description=task_desc, language=self.lang)
         except Exception:
             pass
 
@@ -823,6 +850,7 @@ class MainWindow:
 
     def _on_close(self):
         try:
+            self._flush_config_sync()
             self.config['stats'] = self.stats
             _save_config_obj(self.config)
             self._stop_simulation()

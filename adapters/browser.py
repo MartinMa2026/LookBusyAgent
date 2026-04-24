@@ -12,6 +12,7 @@ import random
 import time
 import json
 import os
+import subprocess
 import pyautogui
 import pygetwindow as gw
 
@@ -35,12 +36,13 @@ class BrowserAdapter(BaseAdapter):
     }
 
 
-    def __init__(self, app_name: str, task_description: str, stop_event, llm=None):
-        super().__init__(app_name, task_description, stop_event, llm)
+    def __init__(self, app_name: str, task_description: str, stop_event, llm=None, language: str = "ZH"):
+        super().__init__(app_name, task_description, stop_event, llm, language=language)
         self.browser_urls = _load_browser_urls()
         self._window_kws = {"Chrome": ["Chrome", "Google Chrome"],
                             "Edge": ["Edge", "Microsoft Edge"]}
         self.action_queue = []
+        self._just_launched = False
 
     def _find_window(self):
         kws = self._window_kws.get(self.app_name, ["Chrome"])
@@ -48,6 +50,36 @@ class BrowserAdapter(BaseAdapter):
             if any(k.lower() in win.title.lower() for k in kws):
                 return win
         return None
+
+    def _get_browser_executable(self):
+        candidates = {
+            "Chrome": [
+                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            ],
+            "Edge": [
+                r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+                r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            ],
+        }
+        for path in candidates.get(self.app_name, []):
+            if os.path.exists(path):
+                return path
+        return None
+
+    def _launch_browser(self):
+        url = random.choice(self.browser_urls or ['https://www.google.com'])
+        exe = self._get_browser_executable()
+        try:
+            if exe:
+                subprocess.Popen([exe, url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                os.startfile(url)
+            self._just_launched = True
+            return True
+        except Exception as e:
+            print(f"[Browser] launch failed: {e}")
+            return False
 
     def _activate_window(self) -> bool:
         kws = self._window_kws.get(self.app_name, ["Chrome"])
@@ -65,13 +97,36 @@ class BrowserAdapter(BaseAdapter):
                 time.sleep(random.uniform(0.3, 0.6))
                 if getattr(win, 'isActive', False):
                     self.current_window = win
+                    self._just_launched = False
                     return True
                 else:
                     continue
+        if self._launch_browser():
+            time.sleep(random.uniform(1.5, 2.8))
+            for _ in range(6):
+                win = self._find_window()
+                if win:
+                    try:
+                        if getattr(win, 'isMinimized', False):
+                            win.restore()
+                            time.sleep(0.2)
+                        pyautogui.press('alt')
+                        win.activate()
+                    except Exception:
+                        pass
+                    time.sleep(random.uniform(0.3, 0.6))
+                    if getattr(win, 'isActive', False):
+                        self.current_window = win
+                        return True
+                time.sleep(0.4)
         return False
 
     def _generate_behavior_chain(self) -> list:
         """生成一套具有连贯逻辑的上网行为链（剧本）"""
+        if self._just_launched:
+            self._just_launched = False
+            return ['research_loop', 'scroll_read', 'fake_search', 'scroll_read']
+
         chains = [
             # 剧本1: 查阅资料 - 新开标签页 -> 尝试搜索 -> 滚动查阅结果 -> 点击进入页面留在文章页细看 -> 继续滚动
             ['new_tab', 'fake_search', 'scroll_read', 'stay_and_read', 'scroll_read'],
@@ -82,7 +137,7 @@ class BrowserAdapter(BaseAdapter):
             # 剧本4: 轻度摸鱼 - 随便搜点什么就一直停在那看
             ['fake_search', 'stay_and_read', 'scroll_read', 'stay_and_read'],
             # 剧本5: 重度阅读 - 连着滚然后一直看
-            ['scroll_read', 'stay_and_read', 'scroll_read', 'stay_and_read', 'scroll_read']
+            ['navigate', 'scroll_read', 'stay_and_read', 'scroll_read']
         ]
         return random.choice(chains)
 
@@ -141,14 +196,14 @@ class BrowserAdapter(BaseAdapter):
         """停留在当前页面认真阅读（鼠标跟随文字移动）"""
         screen_w, screen_h = pyautogui.size()
         y = int(screen_h * 0.25)
-        for _ in range(random.randint(3, 6)):
+        for _ in range(random.randint(2, 4)):
             x = random.randint(int(screen_w * 0.1), int(screen_w * 0.85))
             y = min(int(screen_h * 0.82), y + random.randint(15, 45))
-            be.human_move(x, y, duration=random.uniform(0.5, 1.2))
-            be.short_pause(0.4, 1.2)
+            be.human_move(x, y, duration=random.uniform(0.25, 0.7))
+            be.short_pause(0.2, 0.6)
         if random.random() < 0.4:
-            be.human_scroll(clicks=random.randint(3, 6), direction='up')
-            be.short_pause(0.5, 1.5)
+            be.human_scroll(clicks=random.randint(2, 4), direction='up')
+            be.short_pause(0.2, 0.6)
 
     def _action_scroll_read(self):
         """快速阅读当前页面"""

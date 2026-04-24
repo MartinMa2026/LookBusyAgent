@@ -13,14 +13,32 @@ from adapters.base_adapter import BaseAdapter
 from core import behavior_engine as be
 
 
-_WPS_TEXT_TEMPLATES = [
-    "根据当前材料，先把关键数据和结论补齐。",
-    "这一版先整理结构，细节稍后再补充。",
-    "先把重点问题拆开，后续逐项跟进。",
-    "这里需要补充背景说明和处理建议。",
-]
+_WPS_TEXT_TEMPLATES = {
+    "ZH": [
+        "根据当前材料，先把关键数据和结论补齐。",
+        "这一版先整理结构，细节稍后再补充。",
+        "先把重点问题拆开，后续逐项跟进。",
+        "这里需要补充背景说明和处理建议。",
+    ],
+    "EN": [
+        "For this draft, let's complete the key figures and conclusions first.",
+        "This pass should focus on structure first, with details added afterward.",
+        "The main issues should be split out first and followed up one by one.",
+        "This section still needs background context and handling notes.",
+    ],
+    "JA": [
+        "この版ではまず主要な数値と結論を補います。",
+        "今回は先に構成を整え、細部は後で追記します。",
+        "重要な論点を先に分けて、後続で順番に対応します。",
+        "この箇所には背景説明と対応方針の追記が必要です。",
+    ],
+}
 
-_WPS_SHEET_LABELS = ["汇总", "分析", "预算", "进度", "复盘", "数据"]
+_WPS_SHEET_LABELS = {
+    "ZH": ["汇总", "分析", "预算", "进度", "复盘", "数据"],
+    "EN": ["summary", "analysis", "budget", "progress", "review", "data"],
+    "JA": ["集計", "分析", "予算", "進捗", "振り返り", "データ"],
+}
 _BLOCKING_DIALOG_KEYWORDS = (
     "打开",
     "open",
@@ -45,8 +63,8 @@ class WPSAdapter(BaseAdapter):
         "priority": 1,
     }
 
-    def __init__(self, app_name: str, task_description: str, stop_event, llm=None):
-        super().__init__(app_name, task_description, stop_event, llm)
+    def __init__(self, app_name: str, task_description: str, stop_event, llm=None, language: str = "ZH"):
+        super().__init__(app_name, task_description, stop_event, llm, language=language)
         self.action_queue = []
         self.current_window = None
         self._mode = "home"
@@ -109,13 +127,13 @@ class WPSAdapter(BaseAdapter):
                 ["hover_nav", "pause_reading", "create_blank_document"],
             ],
             "writer": [
-                ["read_document", "search_document", "type_short_note", "switch_tab"],
-                ["read_document", "review_selection", "read_document"],
+                ["read_document", "mouse_review", "type_short_note", "switch_tab"],
+                ["read_document", "mouse_review", "read_document"],
                 ["type_short_note", "read_document", "navigate_document"],
             ],
             "sheet": [
                 ["sheet_navigate", "sheet_scroll", "sheet_fill", "switch_tab"],
-                ["sheet_select", "sheet_navigate", "sheet_scroll"],
+                ["sheet_mouse_review", "sheet_navigate", "sheet_scroll"],
                 ["sheet_fill", "sheet_navigate", "sheet_scroll"],
             ],
             "slides": [
@@ -248,11 +266,8 @@ class WPSAdapter(BaseAdapter):
         self.action_queue = self._generate_behavior_chain("sheet")
 
     def _action_switch_tab(self):
-        if random.random() < 0.55:
-            pyautogui.hotkey("ctrl", "tab")
-        else:
-            x, y = self._window_point(random.uniform(0.20, 0.72), random.uniform(0.08, 0.14))
-            be.human_click(x, y)
+        x, y = self._window_point(random.uniform(0.20, 0.72), random.uniform(0.08, 0.14))
+        be.human_click(x, y)
         be.short_pause(0.5, 1.0)
 
     def _action_pause_reading(self):
@@ -268,16 +283,9 @@ class WPSAdapter(BaseAdapter):
         if random.random() < 0.7:
             be.human_scroll(clicks=random.randint(3, 8), direction=random.choice(["down", "down", "up"]))
 
-    def _action_search_document(self):
-        pyautogui.hotkey("ctrl", "f")
-        be.short_pause(0.3, 0.6)
-        keywords = self._get_task_keywords() or ["报告", "分析", "数据", "方案"]
-        be.human_type(random.choice(keywords))
-        be.short_pause(1.0, 2.0)
-        pyautogui.press("escape")
-
     def _action_type_short_note(self):
-        text = self._get_paragraph() if random.random() < 0.35 else random.choice(_WPS_TEXT_TEMPLATES)
+        text_pool = _WPS_TEXT_TEMPLATES.get(self.language, _WPS_TEXT_TEMPLATES["ZH"])
+        text = self._get_paragraph() if random.random() < 0.35 else random.choice(text_pool)
         x, y = self._window_point(random.uniform(0.42, 0.74), random.uniform(0.74, 0.86))
         be.human_click(x, y)
         be.short_pause(0.2, 0.5)
@@ -285,21 +293,17 @@ class WPSAdapter(BaseAdapter):
         if random.random() < 0.6:
             pyautogui.press("enter")
 
-    def _action_review_selection(self):
-        pyautogui.keyDown("shift")
-        for _ in range(random.randint(3, 8)):
-            pyautogui.press(random.choice(["down", "right", "right"]))
-            time.sleep(random.uniform(0.05, 0.12))
-        pyautogui.keyUp("shift")
-        be.short_pause(0.6, 1.4)
-        pyautogui.press("left")
+    def _action_mouse_review(self):
+        for _ in range(random.randint(2, 4)):
+            x, y = self._window_point(random.uniform(0.28, 0.82), random.uniform(0.28, 0.76))
+            be.human_move(x, y, duration=random.uniform(0.25, 0.6))
+            be.short_pause(0.2, 0.5)
+        if random.random() < 0.4:
+            be.human_click()
 
     def _action_navigate_document(self):
-        key = random.choice(["pagedown", "pageup", "ctrl+home", "ctrl+end"])
-        if "+" in key:
-            pyautogui.hotkey(*key.split("+"))
-        else:
-            pyautogui.press(key)
+        key = random.choice(["pagedown", "pageup", "down", "up"])
+        pyautogui.press(key)
         be.short_pause(0.5, 1.3)
 
     def _action_sheet_navigate(self):
@@ -319,18 +323,17 @@ class WPSAdapter(BaseAdapter):
             if random.random() < 0.7:
                 pyautogui.typewrite(str(random.randint(10, 9999)), interval=random.uniform(0.04, 0.09))
             else:
-                be.human_type_burst(random.choice(_WPS_SHEET_LABELS))
+                be.human_type_burst(random.choice(_WPS_SHEET_LABELS.get(self.language, _WPS_SHEET_LABELS["ZH"])))
             pyautogui.press(random.choice(["tab", "enter"]))
             be.short_pause(0.1, 0.3)
 
-    def _action_sheet_select(self):
-        pyautogui.keyDown("shift")
-        for _ in range(random.randint(2, 6)):
-            pyautogui.press(random.choice(["right", "down", "right"]))
-            time.sleep(random.uniform(0.05, 0.12))
-        pyautogui.keyUp("shift")
-        be.short_pause(0.4, 1.0)
-        pyautogui.press("escape")
+    def _action_sheet_mouse_review(self):
+        for _ in range(random.randint(2, 4)):
+            x, y = self._window_point(random.uniform(0.36, 0.84), random.uniform(0.28, 0.72))
+            be.human_move(x, y, duration=random.uniform(0.2, 0.45))
+            be.short_pause(0.2, 0.5)
+        if random.random() < 0.4:
+            be.human_click()
 
     def _action_thumbnail_browse(self):
         x, y = self._window_point(random.uniform(0.08, 0.18), random.uniform(0.22, 0.78))

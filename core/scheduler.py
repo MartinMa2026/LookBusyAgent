@@ -33,6 +33,7 @@ class Scheduler:
         task_description: str = "",
         stop_event: threading.Event = None,
         identity: str = "",
+        language: str = "ZH",
         selected_apps: list = None,   # 旧接口兼容
     ):
         if selected_apps is not None and not app_weights:
@@ -41,12 +42,15 @@ class Scheduler:
         self.app_weights      = {k: v for k, v in app_weights.items() if v > 0}
         self.task_description = task_description
         self.identity         = identity
+        self.language         = language if language in {"ZH", "EN", "JA"} else "ZH"
         self.stop_event       = stop_event or threading.Event()
         self.config           = _load_config()
         self._thread          = None
         self._adapters        = {}
         self._llm             = LLMGenerator(task_description=task_description,
-                                             identity=identity)
+                                             identity=identity,
+                                             language=self.language)
+        self._last_app        = ""
 
     # ── 适配器加载 ──────────────────────────────────────────
 
@@ -57,12 +61,28 @@ class Scheduler:
         for app in self.app_weights:
             cls = get_adapter_class(app)
             if cls:
-                self._adapters[app] = cls(
-                    app_name=app,
-                    task_description=self.task_description,
-                    stop_event=self.stop_event,
-                    llm=self._llm,
-                )
+                kwargs = {
+                    "app_name": app,
+                    "task_description": self.task_description,
+                    "stop_event": self.stop_event,
+                    "llm": self._llm,
+                    "language": self.language,
+                }
+                try:
+                    self._adapters[app] = cls(**kwargs)
+                except TypeError:
+                    kwargs.pop("language", None)
+                    self._adapters[app] = cls(**kwargs)
+
+    def set_language(self, language: str):
+        if language not in {"ZH", "EN", "JA"}:
+            return
+        self.language = language
+        if self._llm:
+            self._llm.set_language(language)
+        for adapter in self._adapters.values():
+            if hasattr(adapter, "set_language"):
+                adapter.set_language(language)
 
     # ── 加权随机选择 ────────────────────────────────────────
 
@@ -71,8 +91,20 @@ class Scheduler:
         apps = [a for a in self._adapters if a in self.app_weights]
         if not apps:
             return ""
+        if len(apps) > 1 and self._last_app in apps:
+            apps = [a for a in apps if a != self._last_app]
         weights = [self.app_weights[a] for a in apps]
         return random.choices(apps, weights=weights, k=1)[0]
+
+    def _get_slot_duration(self) -> float:
+        interval_min, interval_max = self.config.get('switch_interval_minutes', [0.5, 2])
+        duration = random.uniform(interval_min * 60, interval_max * 60)
+
+        if len(self._adapters) > 1:
+            multi_min, multi_max = self.config.get('multi_app_switch_seconds', [12, 28])
+            duration = min(duration, random.uniform(float(multi_min), float(multi_max)))
+
+        return duration
 
     # ── 调度循环 ────────────────────────────────────────────
 
@@ -89,15 +121,13 @@ class Scheduler:
         if not self._adapters:
             return
 
-        interval_min, interval_max = self.config.get('switch_interval_minutes', [0.5, 2])
-
         while not self.stop_event.is_set():
             app_name = self._weighted_choice()
             if not app_name:
                 time.sleep(1)
                 continue
             adapter  = self._adapters[app_name]
-            slot_duration = random.uniform(interval_min * 60, interval_max * 60)
+            slot_duration = self._get_slot_duration()
             slot_end = time.time() + slot_duration
 
             try:
@@ -114,6 +144,8 @@ class Scheduler:
                     queue = getattr(adapter, 'action_queue', [])
                     if time.time() >= slot_end and not queue:
                         break
+
+                self._last_app = app_name
 
             except InterruptedError:
                 break

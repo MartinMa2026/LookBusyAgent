@@ -7,8 +7,11 @@ excel.py - Excel 适配器（热火朝天版）
 - 整体节奏加快
 """
 
+import os
 import random
+import subprocess
 import time
+from pathlib import Path
 import pyautogui
 import pygetwindow as gw
 
@@ -25,6 +28,12 @@ _FAKE_NUMBERS = [
 
 _FAKE_HEADERS = ["Q1", "Q2", "Q3", "Q4", "季度", "合计", "占比",
                  "环比", "同比", "目标", "完成率", "差异", "备注"]
+
+_FAKE_TEXT_VALUES = {
+    "ZH": ["报表", "数据", "汇总", "分析", "进度", "核对"],
+    "EN": ["report", "data", "summary", "analysis", "progress", "review"],
+    "JA": ["報告", "データ", "集計", "分析", "進捗", "確認"],
+}
 
 
 class ExcelAdapter(BaseAdapter):
@@ -68,30 +77,55 @@ class ExcelAdapter(BaseAdapter):
             return True
             
         # ✅ 尝试创建临时文件，挂起寻找
-        self._create_temp_workbook()
+        self._launch_blank_workbook()
         time.sleep(2.5)
         
         return attempt_activation()
 
-    def _create_temp_workbook(self):
-        import tempfile
-        import os
-        tmp = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False,
-                                          prefix='look_busy_', dir=tempfile.gettempdir())
-        tmp.close()
-        os.startfile(tmp.name)
+    def _get_excel_executable(self):
+        candidates = [
+            r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE",
+            r"C:\Program Files (x86)\Microsoft Office\root\Office16\EXCEL.EXE",
+            r"C:\Program Files\Microsoft Office\Office16\EXCEL.EXE",
+            r"C:\Program Files (x86)\Microsoft Office\Office16\EXCEL.EXE",
+            r"C:\Program Files\Microsoft Office\root\Office15\EXCEL.EXE",
+            r"C:\Program Files (x86)\Microsoft Office\root\Office15\EXCEL.EXE",
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+
+        office_roots = [
+            Path(r"C:\Program Files\Microsoft Office"),
+            Path(r"C:\Program Files (x86)\Microsoft Office"),
+        ]
+        for root in office_roots:
+            if not root.exists():
+                continue
+            matches = list(root.rglob("EXCEL.EXE"))
+            if matches:
+                return str(matches[0])
+        return None
+
+    def _launch_blank_workbook(self):
+        exe = self._get_excel_executable()
+        try:
+            if exe:
+                subprocess.Popen([exe, "/x"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                os.startfile("excel")
+            return True
+        except Exception as e:
+            print(f"[Excel] launch failed: {e}")
+            return False
 
     def _generate_behavior_chain(self) -> list:
         """生成支持当面录入的 Excel 动作链（不保存）"""
         chains = [
-            # 剧本1: 大盘录入查阅 - 选区高亮 -> 疯狂录数据 -> 下推滚动核对 -> 全局搜索数据
-            ['select_range', 'fill_table', 'scroll', 'search_data'],
-            # 剧本2: 走神加小改 - 游动 -> 鼠标划 -> 填几个字
-            ['navigate_cells', 'scroll', 'type_data', 'navigate_cells'],
-            # 剧本3: 核对填表 - 搜索 -> 游走 -> 填一次表
-            ['search_data', 'navigate_cells', 'fill_table'],
-            # 剧本4: 勤奋表哥 - 疯狂敲键盘
-            ['fill_table', 'type_data', 'fill_table']
+            ['mouse_review', 'fill_table', 'scroll', 'type_data'],
+            ['navigate_cells', 'scroll', 'type_data', 'mouse_review'],
+            ['fill_table', 'navigate_cells', 'scroll'],
+            ['type_data', 'fill_table', 'mouse_review'],
         ]
         return random.choice(chains)
 
@@ -105,9 +139,7 @@ class ExcelAdapter(BaseAdapter):
         action = self.action_queue.pop(0)
 
         try:
-            if action == 'search_data':
-                self._action_search_data()
-            elif action == 'fill_table':
+            if action == 'fill_table':
                 self._action_fill_table()
             elif action == 'type_data':
                 self._action_type_data()
@@ -115,26 +147,16 @@ class ExcelAdapter(BaseAdapter):
                 self._action_navigate_cells()
             elif action == 'scroll':
                 self._action_scroll()
-            elif action == 'select_range':
-                self._action_select_range()
+            elif action == 'mouse_review':
+                self._action_mouse_review()
             else:
-                self._action_open_close_menu()
+                self._action_navigate_cells()
         except InterruptedError:
             raise
         except Exception as e:
             print(f"[Excel] 动作 {action} 失败: {e}")
 
         be.short_pause(0.2, 0.8)
-
-    def _action_search_data(self):
-        """假装按 Ctrl+F 搜索某个数据，安全查阅"""
-        pyautogui.hotkey('ctrl', 'f')
-        time.sleep(random.uniform(0.3, 0.8))
-        query = random.choice([self._get_number_str(), "总计", "合计", "报表", "2024", "汇总"])
-        be.human_type(query)
-        be.short_pause(1.0, 2.5)
-        pyautogui.press('escape')  # 退出搜索框
-        time.sleep(0.5)
 
     def _get_number_str(self):
         import numbers
@@ -147,7 +169,7 @@ class ExcelAdapter(BaseAdapter):
                 content = self._get_number_str()
                 pyautogui.typewrite(content, interval=random.uniform(0.04, 0.1))
             else:
-                kw = random.choice(["报表", "数据", "汇总", "分析", "用户", "完成"])
+                kw = random.choice(_FAKE_TEXT_VALUES.get(self.language, _FAKE_TEXT_VALUES["ZH"]))
                 be.human_type_burst(kw)
             time.sleep(0.05)
             
@@ -168,7 +190,7 @@ class ExcelAdapter(BaseAdapter):
             content = self._get_number_str()
             pyautogui.typewrite(content, interval=random.uniform(0.05, 0.12))
         else:
-            kw = random.choice(["财务", "核对", "报表"])
+            kw = random.choice(_FAKE_TEXT_VALUES.get(self.language, _FAKE_TEXT_VALUES["ZH"]))
             be.human_type_burst(kw)
         time.sleep(0.1)
         if random.random() < 0.5:
@@ -194,16 +216,14 @@ class ExcelAdapter(BaseAdapter):
                         direction=random.choice(['down', 'down', 'up', 'right']))
         be.short_pause(0.3, 1.0)
 
-    def _action_open_close_menu(self):
-        pyautogui.press('alt')
-        time.sleep(random.uniform(0.3, 0.6))
-        pyautogui.press('escape')
-
-    def _action_select_range(self):
-        pyautogui.keyDown('shift')
-        for _ in range(random.randint(3, 10)):
-            pyautogui.press(random.choice(['right', 'down', 'right']))
-            time.sleep(random.uniform(0.05, 0.15))
-        pyautogui.keyUp('shift')
-        be.short_pause(0.5, 1.5)
-        pyautogui.press('escape')
+    def _action_mouse_review(self):
+        screen_w, screen_h = pyautogui.size()
+        for _ in range(random.randint(2, 4)):
+            be.human_move(
+                random.randint(int(screen_w * 0.35), int(screen_w * 0.85)),
+                random.randint(int(screen_h * 0.25), int(screen_h * 0.75)),
+                duration=random.uniform(0.2, 0.5),
+            )
+            be.short_pause(0.2, 0.5)
+        if random.random() < 0.5:
+            be.human_click()

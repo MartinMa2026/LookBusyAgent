@@ -19,28 +19,77 @@ from typing import Optional
 
 # ── 降级模板（LLM 不可用时使用）────────────────────────────
 
-_FALLBACK_REPLIES = [
-    "好的，我看一下", "稍等，我确认一下", "收到，我处理一下",
-    "嗯嗯，明白了", "好的，待我查一查", "正在整理，稍后发给你",
-    "了解，我这边跟进一下", "收到！稍等", "好的，我来想一下",
-    "这个我核实一下", "明白，处理完告诉你", "没问题，我这边查",
-]
+_LANGUAGE_NAMES = {
+    "ZH": "Simplified Chinese",
+    "EN": "English",
+    "JA": "Japanese",
+}
 
-_FALLBACK_PARAGRAPHS = [
-    "本季度整体情况来看，数据呈稳步增长趋势，各项指标均达预期。",
-    "根据现有数据，我们对下一阶段工作提出以下几点建议和改进思路。",
-    "经过详细分析，目前问题的主要原因在于流程衔接不畅，需要优化。",
-    "综合以上信息，本次会议的核心议题可以归纳为以下三个方面。",
-    "就本周工作进展而言，主要完成了资料整理、数据核对和方案讨论。",
-    "针对客户提出的问题，我们制定了详细的解决方案和跟进计划。",
-    "基于现有资源和时间节点，建议按照以下优先级推进各项工作。",
-]
+_DEFAULT_CONTEXT = {
+    "ZH": "日常办公工作",
+    "EN": "day-to-day office work",
+    "JA": "日常のオフィス業務",
+}
 
-_FALLBACK_SEARCH_QUERIES = [
-    "季度报告模板", "数据分析方法论", "工作计划表格",
-    "PPT汇报技巧", "项目进度管理", "Excel数据透视表",
-    "工作汇报格式", "会议纪要模板",
-]
+_FALLBACK_REPLIES = {
+    "ZH": [
+        "好的，我看一下",
+        "稍等，我确认一下",
+        "收到，我处理一下",
+        "了解，我这边跟进一下",
+    ],
+    "EN": [
+        "On it, checking now.",
+        "Give me a minute, I'm confirming.",
+        "Got it, I'm handling this.",
+        "Understood, I'll follow up.",
+    ],
+    "JA": [
+        "了解です、確認します。",
+        "少々お待ちください、確認中です。",
+        "承知しました、対応します。",
+        "把握しました、引き続き進めます。",
+    ],
+}
+
+_FALLBACK_PARAGRAPHS = {
+    "ZH": [
+        "本阶段整体数据保持稳定增长，后续重点将放在节奏控制与细节优化上。",
+        "基于现有信息，下一步建议优先梳理关键问题并同步推进相关动作。",
+        "结合当前进展，阶段性目标已基本明确，后续需要继续补齐支撑材料。",
+    ],
+    "EN": [
+        "Overall progress remains stable, and the next step is to tighten execution and refine the supporting details.",
+        "Based on the current information, the priority is to clarify the key issues and move the follow-up items forward in parallel.",
+        "At this stage, the main direction is clear, and the remaining work is focused on filling in the supporting material.",
+    ],
+    "JA": [
+        "現時点の進捗は安定しており、次の段階では実行精度と補足資料の整理が重要です。",
+        "現在の情報を踏まえると、主要課題を明確にしつつ関連対応を並行して進める必要があります。",
+        "ここまでで全体方針は固まっており、今後は根拠資料と細部の整理を進めます。",
+    ],
+}
+
+_FALLBACK_SEARCH_QUERIES = {
+    "ZH": [
+        "季度报告模板",
+        "数据分析方法",
+        "项目进度管理",
+        "会议纪要模板",
+    ],
+    "EN": [
+        "quarterly report template",
+        "data analysis methods",
+        "project progress tracking",
+        "meeting notes template",
+    ],
+    "JA": [
+        "四半期報告 テンプレート",
+        "データ分析 手法",
+        "進捗管理 テンプレート",
+        "議事録 テンプレート",
+    ],
+}
 
 
 def _load_llm_config() -> dict:
@@ -78,10 +127,11 @@ class LLMGenerator:
     """
 
     def __init__(self, task_description: str = "", identity: str = "",
-                 refresh_interval_min: float = 10.0):
+                 refresh_interval_min: float = 10.0, language: str = "ZH"):
         self.task_description    = task_description
         self.identity            = identity
         self.refresh_interval    = refresh_interval_min * 60
+        self.language            = language if language in _LANGUAGE_NAMES else "ZH"
         self.config              = _load_llm_config()
 
         self._cache: dict[str, list[str]] = {
@@ -102,6 +152,11 @@ class LLMGenerator:
             threading.Thread(target=self._auto_refresh_loop, daemon=True).start()
         else:
             self._ready.set()
+
+    def set_language(self, language: str):
+        if language in _LANGUAGE_NAMES:
+            self.language = language
+            self.refresh_async()
 
     # ── LLM 调用 ─────────────────────────────────────────────
 
@@ -144,31 +199,32 @@ class LLMGenerator:
         """构建身份+任务上下文描述"""
         parts = []
         if self.identity:
-            parts.append(f"我是：{self.identity}")
+            parts.append(self.identity)
         if self.task_description:
-            parts.append(f"今天在做：{self.task_description}")
-        return "。".join(parts) if parts else "日常办公工作"
+            parts.append(self.task_description)
+        return " / ".join(parts) if parts else _DEFAULT_CONTEXT[self.language]
 
     def _warm_up(self):
         ctx = self._build_context()
+        language_name = _LANGUAGE_NAMES[self.language]
 
         reply_prompt = (
-            f"背景：{ctx}。\n"
-            f"请生成12条自然的中文工作即时消息回复短句（办公 IM 风格），"
-            f"每条不超过20个汉字，不带序号，每行一条，内容多样化，"
-            f"体现正在忙于该工作、需稍等、已处理中等语气，避免重复。"
+            f"Context: {ctx}\n"
+            f"Generate 12 short workplace instant-message replies in {language_name}.\n"
+            f"Each line should be one natural reply with no numbering.\n"
+            f"Keep them concise, professional, and varied, showing that the user is actively working or checking something."
         )
         para_prompt = (
-            f"背景：{ctx}。\n"
-            f"请生成10条适合在Word工作文档中出现的中文段落开头句，"
-            f"每条25-45个汉字，不带序号，每行一条，"
-            f"内容要紧扣该职位和工作主题，看起来像真实的专业工作文档，避免重复。"
+            f"Context: {ctx}\n"
+            f"Generate 10 professional document sentences in {language_name}.\n"
+            f"Each line should be one sentence suitable for Word or document editing, with no numbering.\n"
+            f"Make them realistic, specific to the work context, and not repetitive."
         )
         search_prompt = (
-            f"背景：{ctx}。\n"
-            f"请生成10个真实工作中会搜索的中文关键词或短语，"
-            f"像在百度/谷歌搜索工作资料时输入的词，不带序号，每行一条，"
-            f"要与该职位和工作内容密切相关，避免重复。"
+            f"Context: {ctx}\n"
+            f"Generate 10 realistic web search queries in {language_name}.\n"
+            f"Each line should be one practical search phrase related to the work context, with no numbering.\n"
+            f"Keep them useful and varied."
         )
 
         new_cache = {}
@@ -224,13 +280,13 @@ class LLMGenerator:
     # ── 公开接口 ─────────────────────────────────────────────
 
     def get_reply(self) -> str:
-        return self._pick('reply', _FALLBACK_REPLIES)
+        return self._pick('reply', _FALLBACK_REPLIES[self.language])
 
     def get_paragraph(self) -> str:
-        return self._pick('paragraph', _FALLBACK_PARAGRAPHS)
+        return self._pick('paragraph', _FALLBACK_PARAGRAPHS[self.language])
 
     def get_search_query(self) -> str:
-        return self._pick('search', _FALLBACK_SEARCH_QUERIES)
+        return self._pick('search', _FALLBACK_SEARCH_QUERIES[self.language])
 
     def refresh_async(self):
         """手动触发异步刷新"""

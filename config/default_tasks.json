@@ -11,6 +11,10 @@
     0.5,
     2
   ],
+  "multi_app_switch_seconds": [
+    12,
+    28
+  ],
   "work_keywords": [
     "报告",
     "分析",
